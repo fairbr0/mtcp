@@ -2,10 +2,10 @@ import java.net.*;
 import java.io.*;
 
 public class Server {
-  private MServerSocket serverSocket;
+  private MigratableServerSocket serverSocket;
 
   public Server(int portA, int portB) throws IOException, ClassNotFoundException {
-    serverSocket = new MServerSocket(portA, portB);
+    serverSocket = new MigratableServerSocket(portA, portB);
   }
 
   public static void main(String args[]) throws IOException, ClassNotFoundException {

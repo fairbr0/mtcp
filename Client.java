@@ -1,10 +1,10 @@
 import java.net.*;
 
 public class Client {
-  private MSock socket;
+  private MigratableSocket socket;
 
   public Client(InetSocketAddress socketAddress) {
-    socket = new MSock(socketAddress);
+    socket = new MigratableSocket(socketAddress);
   }
 
   public static void main(String[] args) {
