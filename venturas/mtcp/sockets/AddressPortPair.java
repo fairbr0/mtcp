@@ -1,3 +1,5 @@
+package venturas.mtcp.sockets;
+
 import java.net.InetAddress;
 
 public class AddressPortPair {
