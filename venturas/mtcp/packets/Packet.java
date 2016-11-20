@@ -2,7 +2,7 @@ package venturas.mtcp.packets;
 
 import java.io.Serializable;
 
-class Packet<T> implements Serializable {
+public class Packet<T> implements Serializable {
 
 	private Flag[] flags;
 	private T payload;
