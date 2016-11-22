@@ -13,10 +13,10 @@ fi
 for package in "mtcp/packets" "mtcp/sockets" "mtcp/io" "app"; do
 	javac $flags venturas/$package/*.java
 	if [[ $? -ne 0 ]]; then
-		echo "💔 COMPILE ERROR on package venturas/$package, see error message. Script will terminate.";
+		echo "💔  COMPILE ERROR on package venturas/$package, see error message. Script will terminate.";
 		exit 1;
 	fi
 done
 
-echo "💙  COMPILE SUCCESS";
+echo "💙  COMPILE SUCCESS, add -w flag to include compile warnings";
 exit 0;

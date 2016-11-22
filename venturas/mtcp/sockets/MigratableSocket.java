@@ -9,32 +9,36 @@ import venturas.mtcp.io.*;
 
 public class MigratableSocket extends AbstractMigratableParentSocket {
 
-	private Socket active;
+	private Socket server;
 	private List<AddressPortPair> serverList;
 
 	public MigratableSocket(InetSocketAddress socketAddress) throws IOException, ClassNotFoundException, MTCPHandshakeException {
 		super();
 
 		log("creating socket");
-		this.active = new Socket(socketAddress.getAddress(), socketAddress.getPort());
+		this.server = new Socket(socketAddress.getAddress(), socketAddress.getPort());
 		log("have created a socket");
 
-		super.os = new ObjectOutputStream(active.getOutputStream());
+		super.os = new ObjectOutputStream(server.getOutputStream());
 		log("have created out stream");
 
-		super.is = new ObjectInputStream(active.getInputStream());
+		super.is = new ObjectInputStream(server.getInputStream());
 		log("have created in stream");
 
 		this.performInitialHandshake();
 
 		//each of the following will run in loop in own thread
-		super.handleIncomingPackets();
-		super.handleOutgoingPackets();
+		this.incomingPacketsListener();
+		this.outgoingPacketsListener();
+	}
+
+	protected void handleIncomingPacket(Packet packet) {
+
 	}
 
 	///all below methods are private to the class and the client should not be using them.
 	protected void performInitialHandshake() throws MTCPHandshakeException, IOException, ClassNotFoundException {
-		this.active.setSoTimeout(5000);
+		this.server.setSoTimeout(5000);
 
 		//send first SYN to the server.
 		Flag[] flags = new Flag[1];
@@ -70,11 +74,106 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		log("Writing " + flags[0]);
 		super.os.writeObject(new Packet<String>(flags));
 		super.os.flush();
-		// this.active.setSoTimeout(10000);
+		// this.server.setSoTimeout(10000);
 		log("Got to the end of my handshake!!!!1");
 	}
 
-	private void migrate() {
-		throw new UnsupportedOperationException("Implement me!");
+
+
+
+	/* TODO reengineer and REMOVE PUBLIC migration access */
+
+
+	public void migrate() throws MTCPMigrationException, IOException, ClassNotFoundException {
+		super.queueStreamsLocked = true;
+
+		/* Pick a server according to some strategy; currently FIRST in LIST */
+		if (serverList == null || serverList.isEmpty() || serverList.get(0) == null) {
+			throw new MTCPMigrationException("No available servers");
+		}
+		AddressPortPair candidate = serverList.remove(0);
+
+		/* Perform migration */
+		Socket newServer = new Socket(candidate.getAddress(), candidate.getPort());
+		log(candidate.toString());
+		ObjectOutputStream mos = new ObjectOutputStream(newServer.getOutputStream());
+		ObjectInputStream mis = new ObjectInputStream(newServer.getInputStream());
+		Flag[] flags = { Flag.SYN, Flag.MIG };
+
+		//TODO getLocalAddress????
+		log("server.getPort():" + server.getPort());
+		AddressPortPair s1Addr = new AddressPortPair(server.getLocalAddress(), server.getPort());
+		mos.writeObject(new Packet<AddressPortPair>(flags, s1Addr));
+
+		//Read from stream, check for errors and throw to prevent continuation of execution
+		Packet<String> resp = (Packet<String>)mis.readObject();
+		if (resp.getFlags().length == 2) {
+			if (resp.getFlag(0) != Flag.ACK || resp.getFlag(1) != Flag.MIG) {
+				logError("2 flags but not (ACK,MIG); instead: (" + resp.getFlag(0) + "," + resp.getFlag(1) + ")");
+				throw new MTCPMigrationException();
+			}
+		} else {
+			logError("Got flags of length (" + resp.getFlags().length + ") rather than (2).");
+			throw new MTCPMigrationException();
+		}
+		log("Packet read was (ACK,MIG); now reading again");
+
+		//Read from stream, check for errors and throw to prevent continuation of execution
+		resp = (Packet<String>)mis.readObject();
+		log("Read another packet!");
+		if (resp.getFlags().length == 2) {
+			if (resp.getFlag(0) != Flag.ACK || resp.getFlag(1) != Flag.MIG) {
+				logError("2 flags but not (ACK,MIG_DONE); instead: (" + resp.getFlag(0) + "," + resp.getFlag(1) + ")");
+				throw new MTCPMigrationException();
+			}
+		} else {
+			logError("Got flags of length (" + resp.getFlags().length + ") rather than (0).");
+			throw new MTCPMigrationException();
+		}
+
+		log("Migration completed!!");
+
+		log("server was:" + server.toString());
+		this.server = newServer;
+		log("Reassigned migrator socket to this MSock's class variable socket");
+
+		super.is = mis;
+		log("Reassigned ObjectInputStream");
+
+		super.os = mos;
+		log("Reassigned ObjectOutputStream");
+
+		log("server now:" + server.toString());
+
+		super.queueStreamsLocked = false;
+	}
+
+	protected final void incomingPacketsListener() {
+		(new Thread(() -> {
+			while (true) {
+				try {
+					if (!queueStreamsLocked) {
+						log("Looking for input");
+						try {
+							Packet p = (Packet)is.readObject();
+							super.inMessageQueue.put(p.getPayload());
+							log("Put onto inMessageQueue");
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				} catch (SocketTimeoutException e) {
+					try {
+						migrate();
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		})).start();
 	}
 }

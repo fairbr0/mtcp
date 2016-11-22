@@ -3,10 +3,15 @@ package venturas.mtcp.io;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class QueuedObjectOutputStream<T> {
-	private BlockingQueue<T> messageQueue;
+/* why not make this class generic rather than having to use
+ * BlockingQueue<Object>? Because this way it will conform to the same interface
+ * as Java's streams
+ */
 
-	public QueuedObjectOutputStream(BlockingQueue messageQueue) {
+public class QueuedObjectOutputStream {
+	private BlockingQueue<Object> messageQueue;
+
+	public QueuedObjectOutputStream(BlockingQueue<Object> messageQueue) {
 		this.messageQueue = messageQueue;
 	}
 
@@ -18,7 +23,7 @@ public class QueuedObjectOutputStream<T> {
 		throw new UnsupportedOperationException();
 	}
 
-	public void writeObject(T t) {
+	public void writeObject(Object t) {
 		this.messageQueue.offer(t);
 	}
 }

@@ -1,2 +1,2 @@
 #!/bin/bash
-java venturas/app/Server &
+java venturas/app/Server 2 0 &
