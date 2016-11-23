@@ -116,7 +116,7 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 
 		//TODO getLocalAddress????
 		log("server.getLocalAddress():" + server.getLocalAddress());
-		AddressPortTuple s1Addr = new AddressPortTuple(server.getLocalAddress().toString(), server.getPort());
+		AddressPortTuple s1Addr = new AddressPortTuple(server.getLocalAddress(), server.getPort());
 		mos.writeObject(new Packet<AddressPortTuple>(flags, s1Addr));
 
 		//Read from stream, check for errors and throw to prevent continuation of execution

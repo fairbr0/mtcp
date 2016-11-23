@@ -20,6 +20,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 
 	public MigratableServerSocket(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException {
 		super();
+		log("!!!!!" + clientPort + "," + serverPort + "!!!!!");
 		this.otherServers = otherServers;
 		log("otherServers size ========= " + this.otherServers.size());
 		for (AddressPortTuple t : otherServers) {
