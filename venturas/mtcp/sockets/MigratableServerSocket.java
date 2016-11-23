@@ -64,7 +64,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 				throw new MTCPMigrationException();
 			}
 		} else {
-			logError("Flags not even lenght 1");
+			logError("Flags not even length 1");
 			throw new MTCPMigrationException();
 		}
 		//if got here, all worked!
@@ -75,6 +75,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 
 		Flag[] ack = { Flag.ACK };
 		log("Will now write some state");
+		//need to put the real state in here
 		otherServerOS.writeObject(new Packet<Integer>(ack, 10));
 		log("Wrote ACK with hardcoded state of Integer(10)");
 	}
@@ -101,6 +102,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			}
 			Flag[] flags = { Flag.SYN, Flag.ACK };
 			log("Writing SYN ACK, plus our server list");
+			//Alter so only a list of public server ip/ports are sent, not the private ones.
 			super.os.writeObject(new Packet<List<AddressPortTuple>>(flags, this.otherServers));
 			super.os.flush();
 			log("Now waiting on a read");
