@@ -69,7 +69,9 @@ public class Server {
 
 		Integer i;
 		while (true) {
+			log("Server AAAAAPPPPPPPPPPPPPPP is waiting for a read");
 			i = (Integer)qis.readObject();
+			log("Server app did a read");
 			log("<server> Got " + i);
 			i++;
 			Thread.sleep(500);
@@ -79,41 +81,6 @@ public class Server {
 			}
 			qos.writeObject(i);
 		}
-
-
-
-
-
-
-
-
-
-		// List<AddressPortPair> l = new LinkedList<>();
-		// for (int i = 0; i < numOtherServers; i++) {
-		// 	if (i != myServerNumber) {
-		// 		l.add(new AddressPortPair(new InetSocketAddress("localhost", 9030 + i).getAddress(), 9030 + i));
-		// 	}
-		// }
-		//
-		// Server s = new Server(9030 + myServerNumber, 10030 + myServerNumber, l);
-		// log("Started...");
-		// MigratableServerSocket mserversckt = s.serverSocket;
-		//
-		// QueuedObjectOutputStream qos = mserversckt.getOutputStream();
-		// QueuedObjectInputStream qis = mserversckt.getInputStream();
-		//
-		// Integer i;
-		// while (true) {
-		// 	i = (Integer)qis.readObject();
-		// 	log("<server> Got " + i);
-		// 	i++;
-		// 	Thread.sleep(500);
-		// 	if (i > 10) {
-		// 		log("Forcing MEGA-long sleep on i > 10");
-		// 		Thread.sleep(500000);
-		// 	}
-		// 	qos.writeObject(i);
-		// }
 	}
 
 	private static void log(String message) {

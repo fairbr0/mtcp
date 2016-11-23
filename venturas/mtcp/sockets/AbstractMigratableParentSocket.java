@@ -29,7 +29,7 @@ public abstract class AbstractMigratableParentSocket {
 			loggingLabel = "<MServerSckt>";
 		}
 	}
-	
+
 	protected abstract void incomingPacketsListener();
 
 	protected final void outgoingPacketsListener() {
@@ -38,6 +38,7 @@ public abstract class AbstractMigratableParentSocket {
 				//take will block if empty queue
 				Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM};
 				try {
+					log("Doing a write:");
 					os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
 					os.flush();
 				} catch (SocketTimeoutException e) {

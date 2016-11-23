@@ -26,6 +26,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		for (AddressPortTuple t : otherServers) {
 			log(t.getAddress() + "," + t.getPorts()[0] + "," + t.getPorts()[1]);
 		}
+
 		this.serverListener = new ServerSocket(serverPort);
 		this.clientListener = new ServerSocket(clientPort);
 		log("Constructor finished, but object initialisation itself must be finished by the programmer making a call to acceptClient()");
@@ -85,6 +86,17 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 
 	}
 
+	private int getPortFromMapping(int clientPort) throws MTCPMigrationException {
+		for (AddressPortTuple tuple : otherServers) {
+			if (tuple.getPorts()[0] == clientPort) {
+				log("Found it! " + clientPort + " maps to " + tuple.getPorts()[1]);
+				return tuple.getPorts()[1];
+			}
+		}
+		logError("Did not find corresponding serverside port from cliPort");
+		throw new MTCPMigrationException();
+	}
+
 	protected void performInitialHandshake() throws MTCPHandshakeException, MTCPMigrationException, IOException, ClassNotFoundException {
 		this.client.setSoTimeout(5000);
 		log("Waiting on an initial read");
@@ -136,20 +148,16 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			super.os.writeObject(new Packet<String>(flags));
 			log("Write done");
 			super.os.flush();
-			log("s1Addr.getAddress()" + s1Addr.getAddress() + "||||" + s1Addr.getPorts()[0]);
-			//TODO might want index 1 (even though it throws exception right now. Maybe need to change usage of Tuples in init funcs?)
-
-
-
-
+			int s1Port = getPortFromMapping(s1Addr.getPorts()[0]);
+			log("s1Addr.getAddress()" + s1Addr.getAddress() + "||||" + s1Port);
 
 
 
 
 			log("Flushed, opening the socket now!");
-			Socket s1 = new Socket(s1Addr.getAddress(), s1Addr.getPorts()[0]);
+			Socket s1 = new Socket(s1Addr.getAddress(), s1Port);
 
-			log("Opened socket to port " + s1Addr.getPorts()[0] + " now opening s1os");
+			log("Opened socket to port " + s1Port + " now opening s1os");
 			ObjectOutputStream s1os = new ObjectOutputStream(s1.getOutputStream());
 			log("Opened s1os, now trying s1is");
 			ObjectInputStream s1is = new ObjectInputStream(s1.getInputStream());
@@ -180,10 +188,9 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 
 
 
-			log("Will now spam (state++) over");
+			log("Will now spam (" + (state + 100) + ") over");
 			Flag[] f = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM};
-			super.os.writeObject(new Packet(f, state + 1));
-
+			super.os.writeObject(new Packet(f, state + 100));
 
 			// try {
 			// 	super.outMessageQueue.put(state + 1);
