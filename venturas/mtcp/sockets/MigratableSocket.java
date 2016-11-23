@@ -10,7 +10,7 @@ import venturas.mtcp.io.*;
 public class MigratableSocket extends AbstractMigratableParentSocket {
 
 	private Socket server;
-	private List<AddressPortPair> serverList;
+	private List<AddressPortTuple> serverList;
 
 	public MigratableSocket(InetSocketAddress socketAddress) throws IOException, ClassNotFoundException, MTCPHandshakeException {
 		super();
@@ -49,7 +49,7 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 
 		//wait for response of SYN plus ACK, and payload of Server list
 		log("Waiting for read");
-		Packet<ArrayList<AddressPortPair>> response = (Packet<ArrayList<AddressPortPair>>) super.is.readObject();
+		Packet<ArrayList<AddressPortTuple>> response = (Packet<ArrayList<AddressPortTuple>>) super.is.readObject();
 		log("I have now read the input");
 		if (response.getFlags().length == 2) {
 			if (response.getFlags()[0].equals(Flag.SYN) && response.getFlags()[1].equals(Flag.ACK)) {
@@ -91,19 +91,33 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		if (serverList == null || serverList.isEmpty() || serverList.get(0) == null) {
 			throw new MTCPMigrationException("No available servers");
 		}
-		AddressPortPair candidate = serverList.remove(0);
+		AddressPortTuple candidate = serverList.remove(0);
 
 		/* Perform migration */
-		Socket newServer = new Socket(candidate.getAddress(), candidate.getPort());
-		log(candidate.toString());
+		Socket newServer = new Socket(candidate.getAddress(), candidate.getPorts()[0]);
+		//TODO THIS MIGHT NEED TO BE 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+		log("candidate:" + candidate.toString());
 		ObjectOutputStream mos = new ObjectOutputStream(newServer.getOutputStream());
 		ObjectInputStream mis = new ObjectInputStream(newServer.getInputStream());
 		Flag[] flags = { Flag.SYN, Flag.MIG };
 
 		//TODO getLocalAddress????
-		log("server.getPort():" + server.getPort());
-		AddressPortPair s1Addr = new AddressPortPair(server.getLocalAddress(), server.getPort());
-		mos.writeObject(new Packet<AddressPortPair>(flags, s1Addr));
+		log("server.getLocalAddress():" + server.getLocalAddress());
+		AddressPortTuple s1Addr = new AddressPortTuple(server.getLocalAddress().toString(), server.getPort());
+		mos.writeObject(new Packet<AddressPortTuple>(flags, s1Addr));
 
 		//Read from stream, check for errors and throw to prevent continuation of execution
 		Packet<String> resp = (Packet<String>)mis.readObject();

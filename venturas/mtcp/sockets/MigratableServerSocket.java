@@ -12,18 +12,18 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 	private Socket client;
 	private ServerSocket clientListener;
 	private ServerSocket serverListener;
-	private List<AddressPortPair> otherServers;
+	private List<AddressPortTuple> otherServers;
 
 	public MigratableServerSocket(int clientPort, int serverPort) throws IOException, ClassNotFoundException {
 		this(clientPort, serverPort, null);
 	}
 
-	public MigratableServerSocket(int clientPort, int serverPort, List<AddressPortPair> otherServers) throws IOException, ClassNotFoundException {
+	public MigratableServerSocket(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException {
 		super();
 		this.otherServers = otherServers;
 		log("otherServers size ========= " + this.otherServers.size());
-		for (AddressPortPair p : otherServers) {
-			log(p.getAddress().toString() + "," + p.getPort());
+		for (AddressPortTuple t : otherServers) {
+			log(t.getAddress() + "," + t.getPorts()[0] + "," + t.getPorts()[1]);
 		}
 		this.serverListener = new ServerSocket(serverPort);
 		this.clientListener = new ServerSocket(clientPort);
@@ -101,7 +101,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			}
 			Flag[] flags = { Flag.SYN, Flag.ACK };
 			log("Writing SYN ACK, plus our server list");
-			super.os.writeObject(new Packet<List<AddressPortPair>>(flags, this.otherServers));
+			super.os.writeObject(new Packet<List<AddressPortTuple>>(flags, this.otherServers));
 			super.os.flush();
 			log("Now waiting on a read");
 			Packet<String> resp = (Packet<String>) super.is.readObject();
@@ -124,8 +124,8 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 				logError("Two flags but not (SYN, MIG); instead: (" + response.getFlag(0) + "," + response.getFlag(1) + ")");
 				throw new MTCPMigrationException();
 			}
-			AddressPortPair s1Addr = (AddressPortPair)response.getPayload();
-			log("Got two flags (SYN, MIG) plus payload (" + ((AddressPortPair)(response.getPayload())).toString() + ")");
+			AddressPortTuple s1Addr = (AddressPortTuple)response.getPayload();
+			log("Got two flags (SYN, MIG) plus payload (" + ((AddressPortTuple)(response.getPayload())).toString() + ")");
 			flags = new Flag[2];
 			flags[0] = Flag.ACK;
 			flags[1] = Flag.MIG;
@@ -133,9 +133,20 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			super.os.writeObject(new Packet<String>(flags));
 			log("Write done");
 			super.os.flush();
+			log("s1Addr.getAddress()" + s1Addr.getAddress() + "||||" + s1Addr.getPorts()[0]);
+			//TODO might want index 1 (even though it throws exception right now. Maybe need to change usage of Tuples in init funcs?)
+
+
+
+
+
+
+
+
 			log("Flushed, opening the socket now!");
-			Socket s1 = new Socket(s1Addr.getAddress(), s1Addr.getPort() + 1000);
-			log("Opened socket to port " + (s1Addr.getPort() + 1000) + "now opening s1os");
+			Socket s1 = new Socket(s1Addr.getAddress(), s1Addr.getPorts()[0]);
+
+			log("Opened socket to port " + s1Addr.getPorts()[0] + " now opening s1os");
 			ObjectOutputStream s1os = new ObjectOutputStream(s1.getOutputStream());
 			log("Opened s1os, now trying s1is");
 			ObjectInputStream s1is = new ObjectInputStream(s1.getInputStream());
