@@ -15,14 +15,14 @@ public abstract class AbstractMigratableParentSocket {
 	private QueuedObjectInputStream qis;
 	private QueuedObjectOutputStream qos;
 	private final String loggingLabel;
-	protected boolean queueStreamsLocked;
+	private boolean ackLock;
 
 	protected AbstractMigratableParentSocket() {
 		inMessageQueue = new LinkedBlockingQueue<Object>();
 		outMessageQueue = new LinkedBlockingQueue<Object>();
 		qis = new QueuedObjectInputStream(inMessageQueue);
 		qos = new QueuedObjectOutputStream(outMessageQueue);
-		queueStreamsLocked = false;
+		ackLock = false;
 		if (this instanceof MigratableSocket) {
 			loggingLabel = "<MSocket>";
 		} else {
@@ -32,25 +32,7 @@ public abstract class AbstractMigratableParentSocket {
 
 	protected abstract void incomingPacketsListener();
 
-	protected final void outgoingPacketsListener() {
-		(new Thread(() -> {
-			while (true) {
-				//take will block if empty queue
-				Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM};
-				try {
-					log("Doing a write:");
-					os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
-					os.flush();
-				} catch (SocketTimeoutException e) {
-					logError("TIMEOUT!");
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		})).start();
-	}
+	protected abstract void outgoingPacketsListener();
 
 	public final QueuedObjectOutputStream getOutputStream() {
 		return qos;
@@ -69,4 +51,31 @@ public abstract class AbstractMigratableParentSocket {
 	}
 
 	protected abstract void performInitialHandshake() throws MTCPHandshakeException, MTCPMigrationException, IOException, ClassNotFoundException;
+
+	protected boolean containsFlag(Flag f, Flag[] flags) {
+		for (Flag p : flags) {
+			if (p == f) return true;
+		}
+
+		return false;
+	}
+
+	protected void sendACK() throws IOException, ClassNotFoundException {
+		Flag[] flags = {Flag.ACK};
+		Packet p = new Packet<String>(flags, "");
+		this.os.writeObject(p);
+		log("Sent ACK");
+	}
+
+	protected synchronized void lock() {
+		ackLock = true;
+	}
+
+	protected synchronized void unlock() {
+		ackLock = false;
+	}
+
+	protected synchronized boolean getACKLock() {
+		return ackLock;
+	}
 }

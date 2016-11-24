@@ -67,6 +67,8 @@ public class Server {
 		QueuedObjectOutputStream qos = mserversckt.getOutputStream();
 		QueuedObjectInputStream qis = mserversckt.getInputStream();
 
+		log("Entering while...");
+
 		Integer i;
 		while (true) {
 			log("Server AAAAAPPPPPPPPPPPPPPP is waiting for a read");
@@ -75,9 +77,9 @@ public class Server {
 			log("<server> Got " + i);
 			i++;
 			Thread.sleep(500);
-			if (i > 10) {
+			if (i == 11) {
 				log("Forcing MEGA-long sleep on i > 10");
-				Thread.sleep(500000);
+				Thread.sleep(10000);
 			}
 			qos.writeObject(i);
 		}

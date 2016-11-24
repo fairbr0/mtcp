@@ -21,12 +21,10 @@ public class Client {
 		QueuedObjectInputStream qis = msocket.getInputStream();
 		Integer i = 0;
 		while (true) {
-			Thread.sleep(500);
+			Thread.sleep(3000);
 			qos.writeObject(i);
 			log("Write " + i + " and wait for read...");
-			int j = (Integer)qis.readObject();
-			log("Got " + j);
-			i = j + 1;
+			i = i + 1;
 		}
 	}
 

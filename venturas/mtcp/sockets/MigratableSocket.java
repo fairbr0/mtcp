@@ -85,8 +85,8 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 
 
 	public void migrate() throws MTCPMigrationException, IOException, ClassNotFoundException {
-		super.queueStreamsLocked = true;
 
+		super.lock();
 		/* Pick a server according to some strategy; currently FIRST in LIST */
 		if (serverList == null || serverList.isEmpty() || serverList.get(0) == null) {
 			throw new MTCPMigrationException("No available servers");
@@ -96,18 +96,6 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		/* Perform migration */
 		Socket newServer = new Socket(candidate.getAddress(), candidate.getPorts()[0]);
 		//TODO THIS MIGHT NEED TO BE 1
-
-
-
-
-
-
-
-
-
-
-
-
 
 		log("candidate:" + candidate.toString());
 		ObjectOutputStream mos = new ObjectOutputStream(newServer.getOutputStream());
@@ -152,42 +140,98 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		log("Reassigned migrator socket to this MSock's class variable socket");
 
 		super.is = mis;
-		log("Reassigned ObjectInputStream");
+		log("Reassigned ObjectInputStream" + super.is);
 
 		super.os = mos;
-		log("Reassigned ObjectOutputStream");
+		log("Reassigned ObjectOutputStream" + super.os);
 
 		log("server now:" + server.toString());
 
-		super.queueStreamsLocked = false;
+		super.unlock();
 	}
 
 	protected final void incomingPacketsListener() {
 		(new Thread(() -> {
-			while (true) {
-				try {
-					if (!queueStreamsLocked) {
+			try {
+				while (true) {
+					try {
 						log("Looking for input");
 						try {
+
 							Packet p = (Packet)is.readObject();
-							super.inMessageQueue.put(p.getPayload());
-							log("Put onto inMessageQueue");
+							if (super.containsFlag(Flag.SYN, p.getFlags())) {
+								super.inMessageQueue.put(p.getPayload());
+								log("Put onto inMessageQueue");
+								super.sendACK();
+							} else if (super.containsFlag(Flag.ACK, p.getFlags())){
+								log("Got ACK");
+								log("releasing locks");
+								super.unlock();
+							} else {
+								logError("Unexpected flag(s), got: " + java.util.Arrays.toString(p.getFlags()));
+							}
+
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
+
+
+						Thread.sleep(1);
+					} catch (ClassNotFoundException e) {
+						e.printStackTrace();
+					} catch (SocketTimeoutException e) {
+						try {
+							log("migrating");
+							migrate();
+							log("finished migrating");
+						} catch (Exception e1) {
+							e1.printStackTrace();
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
-				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
-				} catch (SocketTimeoutException e) {
-					try {
-						migrate();
-					} catch (Exception e1) {
-						e1.printStackTrace();
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
+
 				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 		})).start();
 	}
+
+
+		protected final void outgoingPacketsListener() {
+			(new Thread(() -> {
+				try {
+					while (true) {
+					//take will block if empty queue
+						Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
+						try {
+							log("Doing a write:");
+							log(server.getPort() + " " + server.getLocalPort());
+							while (super.getACKLock()) {
+								//block
+								log("blocked");
+								Thread.sleep(10);
+							}
+							super.lock();
+							log("took ack lock");
+							os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
+							os.flush();
+							log("wrote");
+						} catch (SocketTimeoutException e) {
+							logError("TIMEOUT!");
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						Thread.sleep(1);
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			})).start();
+		}
+
+
 }
