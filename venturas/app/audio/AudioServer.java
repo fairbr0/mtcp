@@ -19,12 +19,11 @@ public class AudioServer {
                 int count;
                 while ((count = in.read(buffer)) != -1) {
                     out.write(buffer, 0, count);
-										try {
+									// try {
 										System.out.println("Doing something");
-										Thread.sleep(1000);
-									} catch (InterruptedException e) {
+									// } catch (InterruptedException e) {
 
-									}
+									// }
 								}
             }
         }
