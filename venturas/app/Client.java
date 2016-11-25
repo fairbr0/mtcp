@@ -14,7 +14,13 @@ public class Client {
 
 	public static void main(String[] args) throws MTCPHandshakeException, InterruptedException, ClassNotFoundException, IOException {
 
-		Client c = new Client(new InetSocketAddress("localhost", 9030));
+		if (args.length != 1) {
+			System.err.println("Did not get a port number from script, assuming S1 is on port 9031");
+			args = new String[1];
+			args[0] ="9031";
+		}
+
+		Client c = new Client(new InetSocketAddress("localhost", Integer.parseInt(args[0])));
 		log("Started!");
 		MigratableSocket msocket = c.socket;
 		QueuedObjectOutputStream qos = msocket.getOutputStream();
