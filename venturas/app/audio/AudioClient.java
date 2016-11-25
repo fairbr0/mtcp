@@ -30,11 +30,23 @@ public class AudioClient {
 
     private static synchronized void play(final InputStream in) throws Exception {
         AudioInputStream ais = AudioSystem.getAudioInputStream(in);
-        try (Clip clip = AudioSystem.getClip()) {
-            clip.open(ais);
-            clip.start();
-            Thread.sleep(100); // given clip.drain a chance to start
-            clip.drain();
+        AudioFormat format = ais.getFormat();
+        System.out.println(format.toString());
+        System.out.println(" " + ais.getFrameLength());
+        DataLine.Info dataLineInfo = new DataLine.Info(SourceDataLine.class, format);
+        SourceDataLine line = (SourceDataLine)AudioSystem.getLine(dataLineInfo);
+        line.open(format);
+        line.start();
+        byte tempBuffer[] = new byte[2048];
+        int cnt;
+        while ((cnt = ais.read(tempBuffer, 0, tempBuffer.length)) != -1) {
+          if (cnt > 0) {
+            line.write(tempBuffer, 0, cnt);
+          }
         }
+        line.drain();
+        line.close();
+
+
     }
 }

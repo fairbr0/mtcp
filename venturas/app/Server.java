@@ -77,7 +77,7 @@ public class Server {
 			log("<server> Got " + i);
 			i++;
 			Thread.sleep(500);
-			if (i == 11) {
+			if (i == 5) {
 				log("Forcing MEGA-long sleep on i > 10");
 				Thread.sleep(10000);
 			}

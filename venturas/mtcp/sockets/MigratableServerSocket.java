@@ -189,11 +189,11 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 
 
 
-			log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+			/*log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 			log("Will now spam (" + (state + 100) + ") over");
 			Flag[] f = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM};
 			super.os.writeObject(new Packet(f, state + 100));
-
+*/
 
 			// Object o = super.is.readObject();
 			// log(o.toString());
@@ -221,6 +221,9 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 								lastGuy = p.getPayload();
 								log("read object");
 								super.inMessageQueue.put(p.getPayload());
+								if ((Integer) p.getPayload() == 10) {
+									Thread.sleep(6000);
+								}
 								sendACK();
 							} else if (super.containsFlag(Flag.ACK, p.getFlags())) {
 								log("Got ACK");
