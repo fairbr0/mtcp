@@ -29,7 +29,15 @@ public class AddressPortTuple implements Serializable {
 		ports[0] = portA;
 	}
 
-	private InetAddress createInetAddress(String from) {
+	public AddressPortTuple(InetAddress address, int portA, int portB) {
+		this.address = address;
+		System.err.println("*******" + address + "*******");
+		ports = new int[2];
+		ports[0] = portA;
+		ports[1] = portB;
+	}
+
+	private static InetAddress createInetAddress(String from) {
 		return (new InetSocketAddress(from, 9000)).getAddress();
 	}
 

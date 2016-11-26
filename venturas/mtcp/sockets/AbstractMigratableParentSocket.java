@@ -30,9 +30,9 @@ public abstract class AbstractMigratableParentSocket {
 		}
 	}
 
-	protected abstract Thread incomingPacketsListener();
+	protected abstract void incomingPacketsListener();
 
-	protected abstract Thread outgoingPacketsListener();
+	protected abstract void outgoingPacketsListener();
 
 	public final QueuedObjectOutputStream getOutputStream() {
 		return qos;

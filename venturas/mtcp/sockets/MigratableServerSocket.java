@@ -14,7 +14,6 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 	private ServerSocket serverListener;
 	private List<AddressPortTuple> otherServers;
 	private Object lastGuy = null;
-	private ExecutorService pool;
 
 	public MigratableServerSocket(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException {
 		super();
@@ -25,16 +24,13 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			log(t.getAddress() + "," + t.getPorts()[0] + "," + t.getPorts()[1]);
 		}
 
-		this.pool = Executors.newFixedThreadPool(2);
 		this.serverListener = new ServerSocket(serverPort);
 		this.clientListener = new ServerSocket(clientPort);
 		log("Constructor finished, but object initialisation itself must be finished by the programmer making a call to acceptClient()");
 	}
 
-	public void acceptClient() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
+	private void acceptClient() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		log("clientListener.accept about to be called");
-
-		serverAcceptThread();
 		this.client = clientListener.accept();
 		log("accepted client");
 
@@ -46,84 +42,59 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 
 		this.performInitialHandshake();
 
-		clientAcceptThread();
-			//each of the following will run in loop in own thread
-	}
+		//each of the following will run in loop in own thread
+		log("Calling packet listeners");
+		this.incomingPacketsListener();
+		this.outgoingPacketsListener();
 
-	public void clientAcceptThread() {
-		(new Thread(() -> {
-			while (true) {
-				log("Calling packet listeners");
-				Thread incommingThread = this.incomingPacketsListener();
-				Thread outgoingThread = this.outgoingPacketsListener();
-
-				while (incommingThread.isAlive()) {
-					// block until the incoming listener thread dies -> it has closed connections
-				}
-
-				outgoingThread.interrupt();
-
-				log("accepted new client");
-				try {
-					this.client = clientListener.accept();
-
-					super.os = new ObjectOutputStream(client.getOutputStream());
-					log("creted new output stream");
-
-					super.is = new ObjectInputStream(client.getInputStream());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				log("created new input stream");
-				try {
-					this.performInitialHandshake();
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
-				} catch (MTCPMigrationException e) {
-					e.printStackTrace();
-				} catch (MTCPHandshakeException e) {
-					e.printStackTrace();
-				}
-			}
-		})).start();
 	}
 
 	//TODO stop throwing Exception!!!!!
-	public void serverAcceptThread() {
-		(new Thread(()-> {
-			log("Waiting for my serverside accept now!");
-			Socket s = serverListener.accept();
-			log("Accepted my other server! Reading from him");
-			ObjectOutputStream otherServerOS = new ObjectOutputStream(s.getOutputStream());
-			ObjectInputStream otherServerIS = new ObjectInputStream(s.getInputStream());
-			Packet packet = (Packet)otherServerIS.readObject();
-			if (packet.getFlags().length == 1) {
-				if (packet.getFlag(0) != Flag.REQ_STATE) {
-					logError("Flags length 1 but not got REQ_STATE, instead: " + packet.getFlag(0));
-					throw new MTCPMigrationException();
-				}
-			} else {
-				logError("Flags not even length 1");
+	private void acceptServer() throws Exception {
+		log("Waiting for my serverside accept now!");
+		Socket s = serverListener.accept();
+		log("Accepted my other server! Reading from him");
+		ObjectOutputStream otherServerOS = new ObjectOutputStream(s.getOutputStream());
+		ObjectInputStream otherServerIS = new ObjectInputStream(s.getInputStream());
+		Packet packet = (Packet)otherServerIS.readObject();
+		if (packet.getFlags().length == 1) {
+			if (packet.getFlag(0) != Flag.REQ_STATE) {
+				logError("Flags length 1 but not got REQ_STATE, instead: " + packet.getFlag(0));
 				throw new MTCPMigrationException();
 			}
-			//if got here, all worked!
-			log("Got REQ_STATE, see:: " + packet.getFlag(0));
+		} else {
+			logError("Flags not even length 1");
+			throw new MTCPMigrationException();
+		}
+		//if got here, all worked!
+		log("Got REQ_STATE, see:: " + packet.getFlag(0));
 
-			log("in.peek:" + inMessageQueue.peek());
-			log("out.peek:" + inMessageQueue.peek());
+		log("in.peek:" + inMessageQueue.peek());
+		log("out.peek:" + inMessageQueue.peek());
 
-			Flag[] ack = { Flag.ACK };
-			log("Will now write some state");
-			//need to put the real state in here
-			otherServerOS.writeObject(new Packet<Integer>(ack, (Integer)lastGuy));
-			log("*********************************Wrote ACK with lastGuy(" + (Integer)lastGuy + ")");
-		})).start();
+		Flag[] ack = { Flag.ACK };
+		log("Will now write some state");
+		//need to put the real state in here
+		otherServerOS.writeObject(new Packet<Integer>(ack, (Integer)lastGuy));
+		log("*********************************Wrote ACK with lastGuy(" + (Integer)lastGuy + ")");
 	}
 
-	protected void handleIncomingPacket(Packet packet) {
-
+	/* THIS IS NON BLOCKING, DOES NOT RETURN A SOCKET */
+	public void accept() {
+		(new Thread(() -> {
+			try {
+				this.acceptClient();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		})).start();
+		(new Thread(() -> {
+			try {
+				this.acceptServer();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		})).start();
 	}
 
 	private int getPortFromMapping(int clientPort) throws MTCPMigrationException {
@@ -189,12 +160,9 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			super.os.writeObject(new Packet<String>(flags));
 			log("Write done");
 			super.os.flush();
+
 			int s1Port = getPortFromMapping(s1Addr.getPorts()[0]);
 			log("s1Addr.getAddress()" + s1Addr.getAddress() + "||||" + s1Port);
-
-
-
-
 			log("Flushed, opening the socket now!");
 			Socket s1 = new Socket(s1Addr.getAddress(), s1Port);
 
@@ -225,7 +193,23 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			super.os.writeObject(new Packet(flags));
 			log("write success, looks like I'm done migrating now");
 
-			super.lock();
+
+
+
+			/*log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+			log("Will now spam (" + (state + 100) + ") over");
+			Flag[] f = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM};
+			super.os.writeObject(new Packet(f, state + 100));
+*/
+
+			// Object o = super.is.readObject();
+			// log(o.toString());
+			// super.os.writeObject(new Packet(f, state + 200));
+
+
+			//surelyt this should be unlock!!!!???!?!!11111
+			super.unlock();
+
 			break;
 		default:
 			logError("Flags not even length 1 or 2, instead: (" + response.getFlags().length + ")");
@@ -233,59 +217,58 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		}
 	}
 
-	protected Thread incomingPacketsListener() {
-		Thread thread = new Thread(() -> {
+	protected final void incomingPacketsListener() {
+		(new Thread(() -> {
 			try {
 				while (true) {
-					log(super.is + " ");
-					log(client.getPort() + " " +client.getLocalPort());
-					Packet p = (Packet)super.is.readObject();
-					if (super.containsFlag(Flag.SYN, p.getFlags())) {
-						lastGuy = p.getPayload();
-						log("read object");
-						super.inMessageQueue.put(p.getPayload());
-						if ((Integer) p.getPayload() == 10) {
-							Thread.sleep(6000);
-						}
-						sendACK();
-					} else if (super.containsFlag(Flag.ACK, p.getFlags())) {
-						log("Got ACK");
-						log("releasing locks");
-						super.unlock();
-					} else {
-						logError("Unexpected flag(s), got: " + java.util.Arrays.toString(p.getFlags()));
-					}
-				Thread.sleep(1);
-			}
+					try {
 
+						log("Looking for input");
+						try {
+							log(super.is + " ");
+							log(client.getPort() + " " +client.getLocalPort());
+							Packet p = (Packet)super.is.readObject();
+							if (super.containsFlag(Flag.SYN, p.getFlags())) {
+								lastGuy = p.getPayload();
+								log("read object");
+								super.inMessageQueue.put(p.getPayload());
+								if ((Integer) p.getPayload() == 10) {
+									Thread.sleep(6000);
+								}
+								sendACK();
+							} else if (super.containsFlag(Flag.ACK, p.getFlags())) {
+								log("Got ACK");
+								log("releasing locks");
+								super.unlock();
+							} else {
+								logError("Unexpected flag(s), got: " + java.util.Arrays.toString(p.getFlags()));
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+
+						Thread.sleep(1);
+					} catch (ClassNotFoundException e) {
+						e.printStackTrace();
+					} catch (SocketTimeoutException e) {
+						logError("Timed out, trying again!");
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			} catch (SocketTimeoutException e) {
-				logError("Timed out, trying again!");
-			} catch (SocketException e) {
-
-				e.printStackTrace();
-				logError("lolololololololololololol TIIIIIIMMMMEEE TOOO DIIIIIIIIIEEEEEEEEEEEEEEEEE");
-				return;
-
-			} catch (IOException e) {
-				e.printStackTrace();
-				logError("TIIIIIIMMMMEEE TOOO DIIIIIIIIIEEEEEEEEbiuguikbguivEEEEEEEEE");
 			}
-		});
-		thread.start();
-		return thread;
+		})).start();
 	}
 
-		protected Thread outgoingPacketsListener() {
-			Thread thread = new Thread(() -> {
-				try {
-					while (true) {
-					//take will block if empty queue
-						Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
-
+	protected final void outgoingPacketsListener() {
+		(new Thread(() -> {
+			try {
+				while (true) {
+				//take will block if empty queue
+					Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
+					try {
 						log("Doing a write:");
 						log(client.getPort() + "");
 						while (super.getACKLock()) {
@@ -296,20 +279,20 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 						os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
 						os.flush();
 						log("wrote");
-
-						Thread.sleep(1);
+					} catch (SocketTimeoutException e) {
+						logError("TIMEOUT!");
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
-				} catch (SocketTimeoutException e) {
-					logError("TIMEOUT!");
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					return;
+					Thread.sleep(1);
 				}
-			});
-			thread.start();
-			return thread;
-		}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		})).start();
+	}
 
 	public void exportState(Object state) {
 		throw new UnsupportedOperationException("Implement me!");

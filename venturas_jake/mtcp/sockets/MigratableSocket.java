@@ -32,6 +32,10 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		this.outgoingPacketsListener();
 	}
 
+	protected void handleIncomingPacket(Packet packet) {
+
+	}
+
 	///all below methods are private to the class and the client should not be using them.
 	protected void performInitialHandshake() throws MTCPHandshakeException, IOException, ClassNotFoundException {
 		this.server.setSoTimeout(5000);
@@ -132,6 +136,18 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		log("Migration completed!!");
 
 		log("server was:" + server.toString());
+
+
+		try {
+			this.server.close();
+			this.server = null;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
+
+
 		this.server = newServer;
 		log("Reassigned migrator socket to this MSock's class variable socket");
 
@@ -146,13 +162,14 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		super.unlock();
 	}
 
-	protected final void incomingPacketsListener() {
-		(new Thread(() -> {
+	protected Thread incomingPacketsListener() {
+		Thread thread = new Thread(() -> {
 			try {
 				while (true) {
 					try {
 						log("Looking for input");
 						try {
+
 							Packet p = (Packet)is.readObject();
 							if (super.containsFlag(Flag.SYN, p.getFlags())) {
 								super.inMessageQueue.put(p.getPayload());
@@ -190,12 +207,15 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		})).start();
+		});
+		thread.start();
+		return thread;
+
 	}
 
 
-		protected final void outgoingPacketsListener() {
-			(new Thread(() -> {
+		protected Thread outgoingPacketsListener() {
+			Thread thread = new Thread(() -> {
 				try {
 					while (true) {
 					//take will block if empty queue
@@ -225,7 +245,9 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-			})).start();
+			});
+			thread.start();
+			return thread;
 		}
 
 
