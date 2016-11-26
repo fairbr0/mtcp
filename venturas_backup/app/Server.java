@@ -18,13 +18,13 @@ public class Server {
 				e.printStackTrace();
 			}
 		})).start();
-		/*(new Thread(() -> {
+		(new Thread(() -> {
 			try {
 				serverSocket.acceptServer();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		})).start();*/
+		})).start();
 	}
 
 

@@ -136,6 +136,18 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		log("Migration completed!!");
 
 		log("server was:" + server.toString());
+
+
+		try {
+			this.server.close();
+			this.server = null;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
+
+
 		this.server = newServer;
 		log("Reassigned migrator socket to this MSock's class variable socket");
 
@@ -150,8 +162,8 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		super.unlock();
 	}
 
-	protected final void incomingPacketsListener() {
-		(new Thread(() -> {
+	protected Thread incomingPacketsListener() {
+		Thread thread = new Thread(() -> {
 			try {
 				while (true) {
 					try {
@@ -195,12 +207,15 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		})).start();
+		});
+		thread.start();
+		return thread;
+
 	}
 
 
-		protected final void outgoingPacketsListener() {
-			(new Thread(() -> {
+		protected Thread outgoingPacketsListener() {
+			Thread thread = new Thread(() -> {
 				try {
 					while (true) {
 					//take will block if empty queue
@@ -230,7 +245,9 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-			})).start();
+			});
+			thread.start();
+			return thread;
 		}
 
 
