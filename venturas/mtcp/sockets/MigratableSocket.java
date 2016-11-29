@@ -32,10 +32,6 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		this.outgoingPacketsListener();
 	}
 
-	protected void handleIncomingPacket(Packet packet) {
-
-	}
-
 	///all below methods are private to the class and the client should not be using them.
 	protected void performInitialHandshake() throws MTCPHandshakeException, IOException, ClassNotFoundException {
 		this.server.setSoTimeout(5000);
@@ -78,13 +74,10 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		log("Got to the end of my handshake!!!!1");
 	}
 
-
-
-
 	/* TODO reengineer and REMOVE PUBLIC migration access */
 
 
-	public void migrate() throws MTCPMigrationException, IOException, ClassNotFoundException {
+	private void migrate() throws MTCPMigrationException, IOException, ClassNotFoundException {
 
 		super.lock();
 		/* Pick a server according to some strategy; currently FIRST in LIST */
@@ -157,7 +150,6 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 					try {
 						log("Looking for input");
 						try {
-
 							Packet p = (Packet)is.readObject();
 							if (super.containsFlag(Flag.SYN, p.getFlags())) {
 								super.inMessageQueue.put(p.getPayload());
@@ -198,40 +190,37 @@ public class MigratableSocket extends AbstractMigratableParentSocket {
 		})).start();
 	}
 
-
-		protected final void outgoingPacketsListener() {
-			(new Thread(() -> {
-				try {
-					while (true) {
-					//take will block if empty queue
-						Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
-						try {
-							log("Doing a write:");
-							log(server.getPort() + " " + server.getLocalPort());
-							while (super.getACKLock()) {
-								//block
-								log("blocked");
-								Thread.sleep(10);
-							}
-							super.lock();
-							log("took ack lock");
-							os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
-							os.flush();
-							log("wrote");
-						} catch (SocketTimeoutException e) {
-							logError("TIMEOUT!");
-						} catch (IOException e) {
-							e.printStackTrace();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
+	protected final void outgoingPacketsListener() {
+		(new Thread(() -> {
+			try {
+				while (true) {
+				//take will block if empty queue
+					Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
+					try {
+						log("Doing a write:");
+						log(server.getPort() + " " + server.getLocalPort());
+						while (super.getACKLock()) {
+							//block
+							log("blocked");
+							Thread.sleep(10);
 						}
-						Thread.sleep(1);
+						super.lock();
+						log("took ack lock");
+						os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
+						os.flush();
+						log("wrote");
+					} catch (SocketTimeoutException e) {
+						logError("TIMEOUT!");
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+					Thread.sleep(1);
 				}
-			})).start();
-		}
-
-
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		})).start();
+	}
 }

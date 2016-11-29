@@ -15,10 +15,6 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 	private List<AddressPortTuple> otherServers;
 	private byte[] lastGuy = null;
 
-	public MigratableServerSocket(int clientPort, int serverPort) throws IOException, ClassNotFoundException {
-		this(clientPort, serverPort, null);
-	}
-
 	public MigratableServerSocket(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException {
 		super();
 		log("!!!!!" + clientPort + "," + serverPort + "!!!!!");
@@ -33,7 +29,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		log("Constructor finished, but object initialisation itself must be finished by the programmer making a call to acceptClient()");
 	}
 
-	public void acceptClient() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
+	private void acceptClient() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		log("clientListener.accept about to be called");
 		this.client = clientListener.accept();
 		log("accepted client");
@@ -54,7 +50,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 	}
 
 	//TODO stop throwing Exception!!!!!
-	public void acceptServer() throws Exception {
+	private void acceptServer() throws Exception {
 		log("Waiting for my serverside accept now!");
 		Socket s = serverListener.accept();
 		log("Accepted my other server! Reading from him");
@@ -83,8 +79,22 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		log("*********************************Wrote ACK with lastGuy(" + java.util.Arrays.toString(lastGuy) + ")");
 	}
 
-	protected void handleIncomingPacket(Packet packet) {
-
+	/* THIS IS NON BLOCKING, DOES NOT RETURN A SOCKET */
+	public void accept() {
+		(new Thread(() -> {
+			try {
+				this.acceptClient();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		})).start();
+		(new Thread(() -> {
+			try {
+				this.acceptServer();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		})).start();
 	}
 
 	private int getPortFromMapping(int clientPort) throws MTCPMigrationException {
@@ -150,12 +160,9 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			super.os.writeObject(new Packet<String>(flags));
 			log("Write done");
 			super.os.flush();
+
 			int s1Port = getPortFromMapping(s1Addr.getPorts()[0]);
 			log("s1Addr.getAddress()" + s1Addr.getAddress() + "||||" + s1Port);
-
-
-
-
 			log("Flushed, opening the socket now!");
 			Socket s1 = new Socket(s1Addr.getAddress(), s1Port);
 
@@ -198,7 +205,11 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 			// Object o = super.is.readObject();
 			// log(o.toString());
 			// super.os.writeObject(new Packet(f, state + 200));
-			super.lock();
+
+
+			//surelyt this should be unlock!!!!???!?!!11111
+			super.unlock();
+
 			break;
 		default:
 			logError("Flags not even length 1 or 2, instead: (" + response.getFlags().length + ")");
@@ -251,41 +262,37 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		})).start();
 	}
 
-
-
-
-
-		protected final void outgoingPacketsListener() {
-			(new Thread(() -> {
-				try {
-					while (true) {
-					//take will block if empty queue
-						Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
-						try {
-							log("Doing a write:");
-							log(client.getPort() + "");
-							while (super.getACKLock()) {
-								//block
-							}
-							super.lock();
-							log("took ack lock");
-							os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
-							os.flush();
-							log("wrote");
-						} catch (SocketTimeoutException e) {
-							logError("TIMEOUT!");
-						} catch (IOException e) {
-							e.printStackTrace();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
+	protected final void outgoingPacketsListener() {
+		(new Thread(() -> {
+			try {
+				while (true) {
+				//take will block if empty queue
+					Flag[] spam = {Flag.SPAMSPAMSPAMSPAMBACONANDSPAM, Flag.SYN};
+					try {
+						log("Doing a write:");
+						log(client.getPort() + "");
+						while (super.getACKLock()) {
+							//block
 						}
-						Thread.sleep(1);
+						super.lock();
+						log("took ack lock");
+						os.writeObject(new Packet<Object>(spam, outMessageQueue.take()));
+						os.flush();
+						log("wrote");
+					} catch (SocketTimeoutException e) {
+						logError("TIMEOUT!");
+					} catch (IOException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+					Thread.sleep(1);
 				}
-			})).start();
-		}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		})).start();
+	}
 
 	public void exportState(Object state) {
 		throw new UnsupportedOperationException("Implement me!");

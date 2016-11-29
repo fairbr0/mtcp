@@ -11,20 +11,7 @@ public class Server {
 
 	public Server(String address, int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		serverSocket = new MigratableServerSocket(clientPort, serverPort, otherServers);
-		(new Thread(() -> {
-			try {
-				serverSocket.acceptClient();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		})).start();
-		(new Thread(() -> {
-			try {
-				serverSocket.acceptServer();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		})).start();
+		serverSocket.accept();
 	}
 
 
@@ -78,7 +65,7 @@ public class Server {
 			i++;
 			Thread.sleep(500);
 			if (i == 5) {
-				log("Forcing MEGA-long sleep on i > 10");
+				log("Forcing MEGA-long sleep on i == 5");
 				Thread.sleep(10000);
 			}
 			qos.writeObject(i);
