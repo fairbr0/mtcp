@@ -13,7 +13,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 	private ServerSocket clientListener;
 	private ServerSocket serverListener;
 	private List<AddressPortTuple> otherServers;
-	private Object lastGuy = null;
+	private byte[] lastGuy = null;
 
 	public MigratableServerSocket(int clientPort, int serverPort) throws IOException, ClassNotFoundException {
 		this(clientPort, serverPort, null);
@@ -60,7 +60,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		log("Accepted my other server! Reading from him");
 		ObjectOutputStream otherServerOS = new ObjectOutputStream(s.getOutputStream());
 		ObjectInputStream otherServerIS = new ObjectInputStream(s.getInputStream());
-		Packet packet = (Packet)otherServerIS.readObject();
+		Packet packet = (Packet) otherServerIS.readObject();
 		if (packet.getFlags().length == 1) {
 			if (packet.getFlag(0) != Flag.REQ_STATE) {
 				logError("Flags length 1 but not got REQ_STATE, instead: " + packet.getFlag(0));
@@ -79,8 +79,8 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 		Flag[] ack = { Flag.ACK };
 		log("Will now write some state");
 		//need to put the real state in here
-		otherServerOS.writeObject(new Packet<Integer>(ack, (Integer)lastGuy));
-		log("*********************************Wrote ACK with lastGuy(" + (Integer)lastGuy + ")");
+		otherServerOS.writeObject(new Packet(ack, lastGuy));
+		log("*********************************Wrote ACK with lastGuy(" + java.util.Arrays.toString(lastGuy) + ")");
 	}
 
 	protected void handleIncomingPacket(Packet packet) {
@@ -101,7 +101,7 @@ public class MigratableServerSocket extends AbstractMigratableParentSocket {
 	protected void performInitialHandshake() throws MTCPHandshakeException, MTCPMigrationException, IOException, ClassNotFoundException {
 		this.client.setSoTimeout(5000);
 		log("Waiting on an initial read");
-		Packet<Object> response = (Packet<Object>) super.is.readObject();
+		Packet response = (Packet) super.is.readObject();
 
 		/* TODO REENGINEER THE SWITCH STATEMENT INTO FUNCTIONS, IT IS HORRID */
 

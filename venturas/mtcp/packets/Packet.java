@@ -2,22 +2,24 @@ package venturas.mtcp.packets;
 
 import java.io.Serializable;
 
-public class Packet<T> implements Serializable {
+public class Packet implements Serializable {
 
 	private Flag[] flags;
-	private T payload;
+	private byte[] payload;
+	private short paddingSize;
+	private short sequenceLength;
 
 	public Packet(Flag[] flags) {
 		this.flags = flags;
 		this.payload = null;
 	}
 
-	public Packet(Flag[] flags, T payload) {
+	public Packet(Flag[] flags, byte[] payload) {
 		this.flags = flags;
 		this.payload = payload;
 	}
 
-	public void setPayload(T payload) {
+	public void setPayload(byte[] payload) {
 		this.payload = payload;
 	}
 
@@ -29,7 +31,7 @@ public class Packet<T> implements Serializable {
 		return this.flags[i];
 	}
 
-	public T getPayload() {
+	public byte[] getPayload() {
 		return this.payload;
 	}
 }

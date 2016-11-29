@@ -10,18 +10,18 @@ import venturas.mtcp.io.*;
 public abstract class AbstractMigratableParentSocket {
 	protected ObjectInputStream is; //child must instantiate
 	protected ObjectOutputStream os; //child must instantiate
-	protected BlockingQueue<Object> inMessageQueue;
-	protected BlockingQueue<Object> outMessageQueue;
-	private QueuedObjectInputStream qis;
-	private QueuedObjectOutputStream qos;
+	protected BlockingQueue<byte[]> inMessageQueue;
+	protected BlockingQueue<byte[]> outMessageQueue;
+	private QueuedByteArrayInputStream qis;
+	private QueuedByteArrayOutputStream qos;
 	private final String loggingLabel;
 	private boolean ackLock;
 
 	protected AbstractMigratableParentSocket() {
-		inMessageQueue = new LinkedBlockingQueue<Object>();
-		outMessageQueue = new LinkedBlockingQueue<Object>();
-		qis = new QueuedObjectInputStream(inMessageQueue);
-		qos = new QueuedObjectOutputStream(outMessageQueue);
+		inMessageQueue = new LinkedBlockingQueue<byte[]>();
+		outMessageQueue = new LinkedBlockingQueue<byte[]>();
+		qis = new QueuedByteArrayInputStream(inMessageQueue);
+		qos = new QueuedByteArrayOutputStream(outMessageQueue);
 		ackLock = false;
 		if (this instanceof MigratableSocket) {
 			loggingLabel = "<MSocket>";
@@ -34,11 +34,11 @@ public abstract class AbstractMigratableParentSocket {
 
 	protected abstract void outgoingPacketsListener();
 
-	public final QueuedObjectOutputStream getOutputStream() {
+	public final QueuedByteArrayOutputStream getOutputStream() {
 		return qos;
 	}
 
-	public final QueuedObjectInputStream getInputStream() {
+	public final QueuedByteArrayInputStream getInputStream() {
 		return qis;
 	}
 
@@ -62,7 +62,7 @@ public abstract class AbstractMigratableParentSocket {
 
 	protected void sendACK() throws IOException, ClassNotFoundException {
 		Flag[] flags = {Flag.ACK};
-		Packet p = new Packet<String>(flags, "");
+		Packet p = new Packet(flags, null);
 		this.os.writeObject(p);
 		log("Sent ACK");
 	}
