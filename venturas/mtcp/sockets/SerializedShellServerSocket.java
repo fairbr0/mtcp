@@ -8,6 +8,7 @@ import java.util.concurrent.*;
 import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
+
 public class SerializedShellServerSocket {
 
   private Socket socket;
@@ -22,6 +23,14 @@ public class SerializedShellServerSocket {
   private State latestState;
 
   public SerializedShellServerSocket(int port) throws Exception {
+
+public class SerializedShellServerSocket extends AbstractSerializedShellSocket {
+
+  private Socket socket;
+
+  public SerializedShellServerSocket(int port) throws Exception {
+    socket = (new ServerSocket(port)).accept();
+
     oos = new ObjectOutputStream(socket.getOutputStream());
     outByteMessages = new LinkedBlockingQueue<byte[]>();
     os = new MigratoryOutputStream(outByteMessages);
@@ -32,7 +41,7 @@ public class SerializedShellServerSocket {
 
     handleIncomingPacket();
     handleOutgoingPacket();
-  }
+  }D
 
   public MigratoryOutputStream getOutputStream() {
     return os;
@@ -170,6 +179,7 @@ public class SerializedShellServerSocket {
 
 		return false;
 	}
+
 
 
 }
