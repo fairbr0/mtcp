@@ -2,11 +2,13 @@ package venturas.app.audio;
 
 import java.io.*;
 import java.net.*;
+
+import java.util.*;
 import venturas.mtcp.io.*;
 import venturas.mtcp.sockets.*;
 
 public class MigAudioServer {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         if (args.length == 0) {
             throw new IllegalArgumentException("expected sound file arg");
         }
@@ -24,9 +26,9 @@ public class MigAudioServer {
             while ((count = in.read(bufferin)) != -1) {
                 //toBytes(bufferin, buffer);
                 out.writeBytes(bufferin);
+                System.out.println(Arrays.toString(bufferin));
                 try {
-                    Thread.sleep(10);
-      			    System.out.println("Doing something");
+                    Thread.sleep(5);
       			} catch (InterruptedException e) {
         			e.printStackTrace();
         		}
