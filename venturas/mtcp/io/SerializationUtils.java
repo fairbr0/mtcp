@@ -1,4 +1,4 @@
-// package venturas.mtcp.io;
+package venturas.mtcp.io;
 
 import java.util.*;
 import java.net.*;
@@ -8,9 +8,9 @@ import java.io.*;
 
 public class SerializationUtils {
 
-    private static int arrayLength = 20;
+    private static int arrayLength = 2048;
 
-    public byte[] toByteArray(Object o) {
+    public static byte[] toByteArray(Object o) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput out = null;
         try {
@@ -34,6 +34,7 @@ public class SerializationUtils {
 
     public byte[][] dicer(Object o) {
         byte[] b = toByteArray(o);
+        System.out.println(java.util.Arrays.toString(b));
         double exactSize = (double)((b.length +0.0) / arrayLength);
         int size = (int)Math.ceil(exactSize);
         int padding = b.length % arrayLength;
@@ -43,11 +44,11 @@ public class SerializationUtils {
 				result[0] = values.returnArray(padding, size, this.arrayLength);
 				//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
 
-        for (int i = 1; i < size - 1; i++) {
-             System.arraycopy(b, i * arrayLength, result[i], 0, arrayLength);
+        for (int i = 0; i < size - 1; i++) {
+             System.arraycopy(b, i * arrayLength, result[i + 1], 0, arrayLength);
         }
-        System.err.println(((size-1)*arrayLength) + "," + (size-1) + "," + padding);
-        System.arraycopy(b, (size-1) * arrayLength, result[size - 1], 0, padding);
+        System.err.println(((size)*arrayLength) + "," + (size-1) + "," + padding);
+        System.arraycopy(b, (size-1) * arrayLength, result[size], 0, padding);
 
 				for(int j = 0; j<result.length; j++) {
 					System.out.println(java.util.Arrays.toString(result[j]));
@@ -59,7 +60,9 @@ public class SerializationUtils {
     private Object conjoiner(byte[][] b) {
 				ByteObject a = new ByteObject();
 				a.setValues(b[0]);
-        int length = (a.length - 1) * this.arrayLength - a.paddingSize; //+ a.paddingSize;
+
+        //total length to read in bytes
+        int length = ((a.length - 1) * this.arrayLength) + a.paddingSize; //+ a.paddingSize;
 				System.out.println("array length = " + length);
         byte[] returnArray = new byte[length];
 				System.out.println("length = " + a.length);
@@ -67,13 +70,13 @@ public class SerializationUtils {
         int size = b.length;
 
 				System.err.println("LOL"+java.util.Arrays.toString(b[0]));
-        for (int i = 1; i < a.length - 1; i++) {
+        for (int i = 1; i < a.length; i++) {
             //arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
             System.arraycopy(b[i], 0, returnArray, (i-1) * this.arrayLength, this.arrayLength);
         }
 				System.out.println("B length = " + a.length);
 				System.out.println(this.arrayLength - a.paddingSize);
-        System.arraycopy(b[a.length-1], 0, returnArray, (a.length-2) * this.arrayLength, (this.arrayLength - a.paddingSize));
+        System.arraycopy(b[a.length], 0, returnArray, (a.length-1) * this.arrayLength, a.paddingSize);
 				System.out.println("Message recieved is" + java.util.Arrays.toString(returnArray));
 
 				// byte[] resultNew = new byte[this.arrayLength*(a.length-1)];
@@ -84,7 +87,7 @@ public class SerializationUtils {
         return fromByteArray(returnArray);
     }
 
-    public Object fromByteArray(byte[] b) {
+    public static Object fromByteArray(byte[] b) {
         ByteArrayInputStream bis = new ByteArrayInputStream(b);
         ObjectInput in = null;
         try {

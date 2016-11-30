@@ -23,11 +23,11 @@ public abstract class AbstractMigratableParentSocket {
 		qis = new QueuedByteArrayInputStream(inMessageQueue);
 		qos = new QueuedByteArrayOutputStream(outMessageQueue);
 		ackLock = false;
-		if (this instanceof MigratableSocket) {
-			loggingLabel = "<MSocket>";
-		} else {
-			loggingLabel = "<MServerSckt>";
-		}
+		// if (this instanceof MigratableSocket) {
+		 	loggingLabel = "<MSocket>";
+		// } else {
+		// 	loggingLabel = "<MServerSckt>";
+		// }
 	}
 
 	protected abstract void incomingPacketsListener();
