@@ -23,7 +23,7 @@ public class QueuedByteArrayOutputStream {
 		throw new UnsupportedOperationException();
 	}
 
-	public void writeObject(byte[] t) {
+	public void writeBytes(byte[] t) {
 		this.messageQueue.offer(t);
 	}
 }
