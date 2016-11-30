@@ -8,7 +8,8 @@ import java.util.concurrent.*;
 import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
-public class AbstractSerializedShellSocket {
+public abstract class AbstractSerializedShellSocket {
+  Socket socket;
   MigratoryInputStream is;
   MigratoryOutputStream os;
   protected BlockingQueue<byte[]> inByteMessages;
@@ -16,6 +17,25 @@ public class AbstractSerializedShellSocket {
   ObjectOutputStream oos;
   ObjectInputStream ois;
   protected AtomicBoolean ackLock = new AtomicBoolean(false);
+
+  public AbstractSerializedShellSocket(Socket s)
+  throws IOException, ClassNotFoundException, MTCPHandshakeException {
+	  socket = s;
+      oos = new ObjectOutputStream(socket.getOutputStream());
+      outByteMessages = new LinkedBlockingQueue<byte[]>();
+      os = new MigratoryOutputStream(outByteMessages);
+
+      ois = new ObjectInputStream(socket.getInputStream());
+      inByteMessages = new LinkedBlockingQueue<byte[]>();
+      is = new MigratoryInputStream(inByteMessages);
+
+      initialHandshake();
+	  handleIncomingPacket();
+      handleOutgoingPacket();
+  }
+
+  protected abstract void initialHandshake()
+  throws IOException, ClassNotFoundException, MTCPHandshakeException;
 
   public MigratoryOutputStream getOutputStream() {
     return os;
