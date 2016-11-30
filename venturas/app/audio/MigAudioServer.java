@@ -1,8 +1,11 @@
+package venturas.app.audio;
+
 import java.io.*;
 import java.net.*;
-import venturas.mtcp.*;
+import venturas.mtcp.io.*;
+import venturas.mtcp.sockets.*;
 
-public class AudioServer {
+public class MigAudioServer {
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             throw new IllegalArgumentException("expected sound file arg");
@@ -12,16 +15,15 @@ public class AudioServer {
         System.out.println("server: " + soundFile);
 
         try (FileInputStream in = new FileInputStream(soundFile)) {
-            ShellServerSocket client = new ShellServerSocket(9030,1030);
-            client.accept();
-            QueuedObjectOutputStream out = client.getOutputStream();
+            SerializedShellSocket client = new SerializedShellSocket(9030, true);
+            MigratoryOutputStream out = client.getOutputStream();
 
             byte bufferin[] = new byte[2048];
             //Byte buffer = new Byte[2048];
             int count;
             while ((count = in.read(bufferin)) != -1) {
                 //toBytes(bufferin, buffer);
-                out.writeObject(bufferin);
+                out.writeBytes(bufferin);
                 try {
                     Thread.sleep(10);
       			    System.out.println("Doing something");

@@ -17,13 +17,14 @@ public class SerializerTest {
 
     BlockingQueue<byte[]> bos = new LinkedBlockingQueue<byte[]>();
 
-    QueuedByteArrayOutputStream qbos = new QueuedByteArrayOutputStream(bos);
-    QueuedByteArrayInputStream qbis = new QueuedByteArrayInputStream(bos);
+    MigratoryOutputStream qbos = new MigratoryOutputStream(bos);
+    MigratoryInputStream qbis = new MigratoryInputStream(bos);
 
-    Conjoiner conj = new Conjoiner(qbis);
-    Dicer dice = new Dicer(qbos);
-    dice.writeObject(strings);
-    LinkedList<String> list = (LinkedList<String>) conj.readObject();
-    System.out.println(list.toString());
+    MigratoryObjectInputStream ois = new MigratoryObjectInputStream(qbis);
+    MigratoryObjectOutputStream oos = new MigratoryObjectOutputStream(qbos);
+    oos.writeObject(strings);
+    System.out.println("Wrote object to stream: " + strings.toString());
+    LinkedList<String> list = (LinkedList<String>) ois.readObject();
+    System.out.println("Recieved object from stream: " + list.toString());
   }
 }

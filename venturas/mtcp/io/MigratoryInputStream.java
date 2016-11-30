@@ -8,10 +8,10 @@ import java.util.concurrent.LinkedBlockingQueue;
  * as Java's streams
  */
 
-public class QueuedByteArrayInputStream {
+public class MigratoryInputStream {
 	private BlockingQueue<byte[]> stream;
 
-	public QueuedByteArrayInputStream(BlockingQueue<byte[]> stream) {
+	public MigratoryInputStream(BlockingQueue<byte[]> stream) {
 		this.stream = stream;
 	}
 

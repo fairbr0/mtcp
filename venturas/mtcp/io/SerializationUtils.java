@@ -125,56 +125,52 @@ public class SerializationUtils {
 }
 
 class ByteObject {
-		int paddingSize;
-		int length;
+	int paddingSize;
+	int length;
 
-		public ByteObject () {
-			this.paddingSize = 0;
-			this.length = 0;
-		}
+	public ByteObject () {
+		this.paddingSize = 0;
+		this.length = 0;
+	}
 
-		public void setValues(byte[] array) {
+	public void setValues(byte[] array) {
 
-			byte[] paddingSize = new byte[4];
-			byte[] length = new byte[4];
-			//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
-			System.arraycopy(array, 0, paddingSize, 0, 4);
-			System.arraycopy(array, 4, length, 0, 4);
+		byte[] paddingSize = new byte[4];
+		byte[] length = new byte[4];
+		//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+		System.arraycopy(array, 0, paddingSize, 0, 4);
+		System.arraycopy(array, 4, length, 0, 4);
 
-			this.paddingSize = (int) byteToInt(paddingSize);
-			System.out.println("Padding = " + this.paddingSize);
-			this.length = (int) byteToInt(length);
-			System.out.println("Length = " + this.length);
-		}
+		this.paddingSize = (int) byteToInt(paddingSize);
+		this.length = (int) byteToInt(length);
+	}
 
-		public byte[] returnArray(int paddingSize, int length, int arrayLength) {
-			byte[] returnArray = new byte[arrayLength];
-			byte[] paddingArray = intToByteArray(paddingSize);
-			byte[] lengthArray = intToByteArray(length);
+	public byte[] returnArray(int paddingSize, int length, int arrayLength) {
+		byte[] returnArray = new byte[arrayLength];
+		byte[] paddingArray = intToByteArray(paddingSize);
+		byte[] lengthArray = intToByteArray(length);
 
-			System.arraycopy(paddingArray, 0, returnArray, 0, 4);
-			System.arraycopy(lengthArray, 0, returnArray, 4, 4);
-			System.out.println("Padding Array = " + paddingSize + " " +  java.util.Arrays.toString(paddingArray));
-			System.out.println("Length Array = "+ length + " " + java.util.Arrays.toString(lengthArray));
-			System.out.println("returned Array = " + java.util.Arrays.toString(returnArray));
-			return returnArray;
-		}
+		System.arraycopy(paddingArray, 0, returnArray, 0, 4);
+		System.arraycopy(lengthArray, 0, returnArray, 4, 4);
 
-		public byte[] intToByteArray(int value) {
-    	return new byte[] {
+		return returnArray;
+	}
+
+	public byte[] intToByteArray(int value) {
+        return new byte[] {
             (byte)(value >>> 24),
             (byte)(value >>> 16),
             (byte)(value >>> 8),
             (byte)value};
-					}
+		}
 
-		public long byteToInt(byte[] bytes) {
+	public long byteToInt(byte[] bytes) {
         int val = 0;
         for (int i = 0; i < bytes.length; i++) {
             val=val<<8;
             val=val|(bytes[i] & 0xFF);
         }
-        return val;
+    return val;
     }
 
 }

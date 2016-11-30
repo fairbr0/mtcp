@@ -12,16 +12,16 @@ public abstract class AbstractMigratableParentSocket {
 	protected ObjectOutputStream os; //child must instantiate
 	protected BlockingQueue<byte[]> inMessageQueue;
 	protected BlockingQueue<byte[]> outMessageQueue;
-	private QueuedByteArrayInputStream qis;
-	private QueuedByteArrayOutputStream qos;
+	private MigratoryInputStream qis;
+	private MigratoryOutputStream qos;
 	private final String loggingLabel;
 	private boolean ackLock;
 
 	protected AbstractMigratableParentSocket() {
 		inMessageQueue = new LinkedBlockingQueue<byte[]>();
 		outMessageQueue = new LinkedBlockingQueue<byte[]>();
-		qis = new QueuedByteArrayInputStream(inMessageQueue);
-		qos = new QueuedByteArrayOutputStream(outMessageQueue);
+		qis = new MigratoryInputStream(inMessageQueue);
+		qos = new MigratoryOutputStream(outMessageQueue);
 		ackLock = false;
 		// if (this instanceof MigratableSocket) {
 		 	loggingLabel = "<MSocket>";
@@ -34,11 +34,11 @@ public abstract class AbstractMigratableParentSocket {
 
 	protected abstract void outgoingPacketsListener();
 
-	public final QueuedByteArrayOutputStream getOutputStream() {
+	public final MigratoryOutputStream getOutputStream() {
 		return qos;
 	}
 
-	public final QueuedByteArrayInputStream getInputStream() {
+	public final MigratoryInputStream getInputStream() {
 		return qis;
 	}
 

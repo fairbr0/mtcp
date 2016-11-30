@@ -11,8 +11,8 @@ import venturas.mtcp.io.*;
 public class SerializedShellSocket {
 
   private Socket socket;
-  private QueuedByteArrayInputStream qbais;
-  private QueuedByteArrayOutputStream qbaos;
+  private MigratoryInputStream is;
+  private MigratoryOutputStream os;
   private BlockingQueue<byte[]> inByteMessages;
   private BlockingQueue<byte[]> outByteMessages;
   private ObjectOutputStream oos;
@@ -28,22 +28,22 @@ public class SerializedShellSocket {
     }
     oos = new ObjectOutputStream(socket.getOutputStream());
     outByteMessages = new LinkedBlockingQueue<byte[]>();
-    qbaos = new QueuedByteArrayOutputStream(outByteMessages);
+    os = new MigratoryOutputStream(outByteMessages);
 
     ois = new ObjectInputStream(socket.getInputStream());
     inByteMessages = new LinkedBlockingQueue<byte[]>();
-    qbais = new QueuedByteArrayInputStream(inByteMessages);
+    is = new MigratoryInputStream(inByteMessages);
 
     handleIncomingPacket();
     handleOutgoingPacket();
   }
 
-  public QueuedByteArrayOutputStream getOutputStream() {
-    return qbaos;
+  public MigratoryOutputStream getOutputStream() {
+    return os;
   }
 
-  public QueuedByteArrayInputStream getInputStream() {
-    return qbais;
+  public MigratoryInputStream getInputStream() {
+    return is;
   }
 
   public void handleIncomingPacket() {
