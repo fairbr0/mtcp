@@ -2,17 +2,17 @@ package venturas.mtcp.packets;
 
 import java.io.Serializable;
 
-public class ServerPacket<T> implements Serializable {
+public class InternalPacket<T> implements Serializable {
 
 	private Flag[] flags;
     private T payload;
 
-	public ServerPacket(Flag[] flags) {
+	public InternalPacket(Flag[] flags) {
 		this.flags = flags;
 		this.payload = null;
 	}
 
-	public ServerPacket(Flag[] flags, T payload) {
+	public InternalPacket(Flag[] flags, T payload) {
 		this.flags = flags;
 		this.payload = payload;
 	}

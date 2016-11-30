@@ -8,10 +8,10 @@ import java.util.concurrent.*;
 import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
-public class SerializedShellSocket extends AbstractSerializedShellSocket {
+public class MSock extends AbstractMSock {
 
-  public SerializedShellSocket(int port) throws Exception {
-    super(new Socket("localhost", port));
+  public MSock(InetAddress address, int port) throws Exception {
+    super(new Socket(address, port));
   }
 
   protected void initialHandshake()
