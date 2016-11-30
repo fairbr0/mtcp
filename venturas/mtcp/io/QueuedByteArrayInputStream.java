@@ -19,7 +19,7 @@ public class QueuedByteArrayInputStream {
 		this.stream.clear();
 	}
 
-	public byte[] readObject() throws InterruptedException {
+	public byte[] readBytes() throws InterruptedException {
 		//following will BLOCK until queue not empty
 		return this.stream.take();
 	}

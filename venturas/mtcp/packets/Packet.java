@@ -6,8 +6,6 @@ public class Packet implements Serializable {
 
 	private Flag[] flags;
 	private byte[] payload;
-	private short paddingSize;
-	private short sequenceLength;
 
 	public Packet(Flag[] flags) {
 		this.flags = flags;
