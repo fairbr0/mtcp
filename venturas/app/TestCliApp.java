@@ -5,7 +5,7 @@ import venturas.mtcp.sockets.*;
 
 public class TestCliApp {
   public static void main(String[] args) throws Exception {
-    SerializedShellSocket c = new SerializedShellSocket(9030, false);
+    SerializedShellSocket c = new SerializedShellSocket(9030);
     log("did socket");
     MigratoryObjectInputStream ois = new MigratoryObjectInputStream(c.getInputStream());
     log("got in stream");

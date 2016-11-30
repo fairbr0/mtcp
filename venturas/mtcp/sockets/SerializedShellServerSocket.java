@@ -8,12 +8,12 @@ import java.util.concurrent.*;
 import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
-public class SerializedShellSocket extends AbstractSerializedShellSocket {
+public class SerializedShellServerSocket extends AbstractSerializedShellSocket {
 
   private Socket socket;
 
-  public SerializedShellSocket(int port) throws Exception {
-    socket = new Socket("localhost", port);
+  public SerializedShellServerSocket(int port) throws Exception {
+    socket = (new ServerSocket(port)).accept();
     oos = new ObjectOutputStream(socket.getOutputStream());
     outByteMessages = new LinkedBlockingQueue<byte[]>();
     os = new MigratoryOutputStream(outByteMessages);

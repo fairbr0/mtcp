@@ -14,7 +14,6 @@ public class SerializerTest {
     strings.add("massive");
     strings.add("cunt");
 
-
     BlockingQueue<byte[]> bos = new LinkedBlockingQueue<byte[]>();
 
     MigratoryOutputStream qbos = new MigratoryOutputStream(bos);
