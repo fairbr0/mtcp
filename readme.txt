@@ -11,6 +11,9 @@
 ./server.sh
         Does no compilation work, but will run alrrady compiled server app.
 
+./runTest.sh
+		Runs a unit test. Give it the package name, followed by test class, eg io.SerializerTest
+
 ===========PACKAGE DISCUSSION============
 venturas
 
@@ -22,4 +25,4 @@ venturas
 		.packets
 			includes packet class and flags (should NOT be used by apps)
 	.app
-		includes client and server music streaming applications	
+		includes client and server music streaming applications
