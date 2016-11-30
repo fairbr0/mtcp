@@ -2,6 +2,7 @@ package venturas.app.audio;
 
 import java.io.*;
 import java.net.*;
+import java.util.*;
 import javax.sound.sampled.*;
 
 import venturas.mtcp.io.*;
@@ -34,7 +35,9 @@ public class MigAudioClient {
 
 
     private static synchronized void play(final MigratoryInputStream in) throws Exception {
-        final AudioFormat format = new AudioFormat("PCM_SIGNED 44100.0 Hz, 16 bit, stereo, 4 bytes/frame, little-endian");
+        //final AudioFormat format = new AudioFormat("PCM_SIGNED 44100.0 Hz, 16 bit, stereo, 4 bytes/frame, little-endian");
+        final AudioFormat format = new AudioFormat(44100.0f, 16, 2, true, false);
+        System.out.println(format.toString());
         DataLine.Info dataLineInfo = new DataLine.Info(SourceDataLine.class, format);
         SourceDataLine line = (SourceDataLine)AudioSystem.getLine(dataLineInfo);
         line.open(format);
@@ -43,10 +46,9 @@ public class MigAudioClient {
 
         while (true) {
             tempBuffer = in.readBytes();
-            line.write(tempBuffer);
+            System.out.println(Arrays.toString(tempBuffer));
+            line.write(tempBuffer, 0, tempBuffer.length);
 
         }
-        line.drain();
-        line.close();
     }
 }
