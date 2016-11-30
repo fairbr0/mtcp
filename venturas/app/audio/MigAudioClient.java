@@ -24,15 +24,13 @@ public class MigAudioClient {
               }
             // play soundfile from server*/
         System.out.println("Client: reading from 127.0.0.1:6666");
-        SerializedShellSocket socket = new SerializedShellSocket(9030, false);
+        SerializedShellSocket socket = new SerializedShellSocket((new InetSocketAddress("localhost", 9030)).getAddress(), 9030);
         MigratoryInputStream in = socket.getInputStream();
         play(in);
 
 
         System.out.println("Client: end");
     }
-
-
 
     private static synchronized void play(final MigratoryInputStream in) throws Exception {
         //final AudioFormat format = new AudioFormat("PCM_SIGNED 44100.0 Hz, 16 bit, stereo, 4 bytes/frame, little-endian");

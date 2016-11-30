@@ -17,7 +17,7 @@ public class MigAudioServer {
         System.out.println("server: " + soundFile);
 
         try (FileInputStream in = new FileInputStream(soundFile)) {
-            SerializedShellSocket client = new SerializedShellSocket(9030, true);
+            SerializedShellServerSocket client = new SerializedShellServerSocket(9030);
             MigratoryOutputStream out = client.getOutputStream();
 
             byte bufferin[] = new byte[2048];
