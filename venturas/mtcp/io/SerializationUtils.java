@@ -6,11 +6,11 @@ import java.io.*;
 
 //http://stackoverflow.com/questions/2836646/java-serializable-object-to-byte-array
 
-public abstract class SerializationUtils {
+public class SerializationUtils {
 
     private static int arrayLength = 20;
 
-    public static byte[] toByteArray(Object o) {
+    public byte[] toByteArray(Object o) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput out = null;
         try {
@@ -32,34 +32,59 @@ public abstract class SerializationUtils {
         return null;
     }
 
-    public static BytedObject dicer(Object o) {
+    public byte[][] dicer(Object o) {
         byte[] b = toByteArray(o);
         double exactSize = (double)((b.length +0.0) / arrayLength);
         int size = (int)Math.ceil(exactSize);
         int padding = b.length % arrayLength;
-        byte[][] result = new byte[size][arrayLength];
-        for (int i = 0; i < size - 1; i++) {
+        byte[][] result = new byte[size+1][arrayLength];
+
+				ByteObject values = new ByteObject();
+				result[0] = values.returnArray(padding, size, this.arrayLength);
+				//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+
+        for (int i = 1; i < size - 1; i++) {
              System.arraycopy(b, i * arrayLength, result[i], 0, arrayLength);
         }
         System.err.println(((size-1)*arrayLength) + "," + (size-1) + "," + padding);
         System.arraycopy(b, (size-1) * arrayLength, result[size - 1], 0, padding);
-        BytedObject bo = new BytedObject(result, padding);
-        return bo;
+
+				for(int j = 0; j<result.length; j++) {
+					System.out.println(java.util.Arrays.toString(result[j]));
+				}
+
+        return result;
     }
 
-    private static Object conjoiner(BytedObject b) {
-        int length = (b.length - 1) * arrayLength + b.paddingSize;
+    private Object conjoiner(byte[][] b) {
+				ByteObject a = new ByteObject();
+				a.setValues(b[0]);
+        int length = (a.length - 1) * this.arrayLength - a.paddingSize; //+ a.paddingSize;
+				System.out.println("array length = " + length);
         byte[] returnArray = new byte[length];
+				System.out.println("length = " + a.length);
+				System.out.println("paddingsize = " + a.paddingSize);
         int size = b.length;
-        for (int i = 0; i < size - 1; i++) {
+
+				System.err.println("LOL"+java.util.Arrays.toString(b[0]));
+        for (int i = 1; i < a.length - 1; i++) {
             //arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
-            System.arraycopy(b.byteArrays[i], 0, returnArray, i * arrayLength, arrayLength);
+            System.arraycopy(b[i], 0, returnArray, (i-1) * this.arrayLength, this.arrayLength);
         }
-        System.arraycopy(b.byteArrays[size-1], 0, returnArray, (size-1) * arrayLength, b.paddingSize);
+				System.out.println("B length = " + a.length);
+				System.out.println(this.arrayLength - a.paddingSize);
+        System.arraycopy(b[a.length-1], 0, returnArray, (a.length-2) * this.arrayLength, (this.arrayLength - a.paddingSize));
+				System.out.println("Message recieved is" + java.util.Arrays.toString(returnArray));
+
+				// byte[] resultNew = new byte[this.arrayLength*(a.length-1)];
+				// //arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+				// System.arraycopy(returnArray, this.arrayLength, resultNew, 0, ((a.length-1)*this.arrayLength));
+
+				//System.out.print(java.util.Arrays.toString(resultNew));
         return fromByteArray(returnArray);
     }
 
-    public static Object fromByteArray(byte[] b) {
+    public Object fromByteArray(byte[] b) {
         ByteArrayInputStream bis = new ByteArrayInputStream(b);
         ObjectInput in = null;
         try {
@@ -82,26 +107,71 @@ public abstract class SerializationUtils {
         return null;
     }
 
-    public static void main(String[] args) {
+    public static  void main(String[] args) {
         String lol = "lololololololswagyolo";
-        BytedObject b = SerializationUtils.dicer(lol);
-        System.err.println("padding(" + b.paddingSize + ")" + ", length(" + b.length + ") with arrays:");
-        for (int i = 0; i < b.byteArrays.length; i++) {
-            System.err.println(java.util.Arrays.toString(b.byteArrays[i]));
-            System.err.println();
-        }
-        System.err.println(SerializationUtils.conjoiner(b));
+				SerializationUtils thing = new SerializationUtils();
+        byte[][] b = thing.dicer(lol);
+				System.out.println("Thing diced");
+        // for (int i = 0; i < b.byteArrays.length; i++) {
+        //     System.err.println(java.util.Arrays.toString(b.byteArrays[i]));
+        //     System.err.println();
+        // }
+        System.err.println(thing.conjoiner(b));
+				System.out.println("Thing conjoined");
     }
 }
 
-class BytedObject {
-    byte[][] byteArrays;
-    int paddingSize;
-    int length;
+class ByteObject {
+		int paddingSize;
+		int length;
 
-    BytedObject(byte[][] byteArrays, int paddingSize) {
-        this.byteArrays = byteArrays;
-        this.paddingSize = paddingSize;
-        this.length = byteArrays.length;
+		public ByteObject () {
+			this.paddingSize = 0;
+			this.length = 0;
+		}
+
+		public void setValues(byte[] array) {
+
+			byte[] paddingSize = new byte[4];
+			byte[] length = new byte[4];
+			//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+			System.arraycopy(array, 0, paddingSize, 0, 4);
+			System.arraycopy(array, 4, length, 0, 4);
+
+			this.paddingSize = (int) byteToInt(paddingSize);
+			System.out.println("Padding = " + this.paddingSize);
+			this.length = (int) byteToInt(length);
+			System.out.println("Length = " + this.length);
+		}
+
+		public byte[] returnArray(int paddingSize, int length, int arrayLength) {
+			byte[] returnArray = new byte[arrayLength];
+			byte[] paddingArray = intToByteArray(paddingSize);
+			byte[] lengthArray = intToByteArray(length);
+
+			System.arraycopy(paddingArray, 0, returnArray, 0, 4);
+			System.arraycopy(lengthArray, 0, returnArray, 4, 4);
+			System.out.println("Padding Array = " + paddingSize + " " +  java.util.Arrays.toString(paddingArray));
+			System.out.println("Length Array = "+ length + " " + java.util.Arrays.toString(lengthArray));
+			System.out.println("returned Array = " + java.util.Arrays.toString(returnArray));
+			return returnArray;
+		}
+
+		public byte[] intToByteArray(int value) {
+    	return new byte[] {
+            (byte)(value >>> 24),
+            (byte)(value >>> 16),
+            (byte)(value >>> 8),
+            (byte)value};
+					}
+
+		public long byteToInt(byte[] bytes) {
+        int val = 0;
+        for (int i = 0; i < bytes.length; i++) {
+            val=val<<8;
+            val=val|(bytes[i] & 0xFF);
+        }
+        return val;
     }
+
 }
