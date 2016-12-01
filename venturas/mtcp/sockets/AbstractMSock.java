@@ -8,85 +8,102 @@ import java.util.concurrent.*;
 import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
-public abstract class AbstractSerializedShellSocket {
-  Socket socket;
-  MigratoryInputStream is;
-  MigratoryOutputStream os;
-  protected BlockingQueue<byte[]> inByteMessages;
-  protected BlockingQueue<byte[]> outByteMessages;
-  ObjectOutputStream oos;
-  ObjectInputStream ois;
-  protected AtomicBoolean ackLock = new AtomicBoolean(false);
+public abstract class AbstractMSock {
+	Socket socket;
+	MigratoryInputStream is;
+	MigratoryOutputStream os;
+	protected BlockingQueue<byte[]> inByteMessages;
+	protected BlockingQueue<byte[]> outByteMessages;
+	ObjectOutputStream oos;
+	ObjectInputStream ois;
+	protected AtomicBoolean ackLock = new AtomicBoolean(false);
 
-  public AbstractSerializedShellSocket(Socket s)
-  throws IOException, ClassNotFoundException, MTCPHandshakeException {
-	  socket = s;
-      oos = new ObjectOutputStream(socket.getOutputStream());
-      outByteMessages = new LinkedBlockingQueue<byte[]>();
-      os = new MigratoryOutputStream(outByteMessages);
+	public AbstractMSock() {
+		//do nothing
+	}
 
-      ois = new ObjectInputStream(socket.getInputStream());
-      inByteMessages = new LinkedBlockingQueue<byte[]>();
-      is = new MigratoryInputStream(inByteMessages);
+	public AbstractMSock(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException {
+		acceptClient(s);
+	}
 
-      initialHandshake();
-	  handleIncomingPacket();
-      handleOutgoingPacket();
-  }
+	protected void acceptClient(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException {
+		socket = s;
+		oos = new ObjectOutputStream(socket.getOutputStream());
+		outByteMessages = new LinkedBlockingQueue<byte[]>();
+		os = new MigratoryOutputStream(outByteMessages);
 
-  protected abstract void initialHandshake()
-  throws IOException, ClassNotFoundException, MTCPHandshakeException;
+		ois = new ObjectInputStream(socket.getInputStream());
+		inByteMessages = new LinkedBlockingQueue<byte[]>();
+		is = new MigratoryInputStream(inByteMessages);
 
-  public MigratoryOutputStream getOutputStream() {
-    return os;
-  }
+		initialHandshake();
+		handleIncomingPacket();
+		handleOutgoingPacket();
+	}
 
-  public MigratoryInputStream getInputStream() {
-    return is;
-  }
+	protected abstract void initialHandshake()
+	throws IOException, ClassNotFoundException, MTCPHandshakeException;
 
-  protected void handleIncomingPacket() {
-    (new Thread(() -> {
-      try {
-        while(true) {
-          Packet p = (Packet)ois.readObject();
-          Flag[] f = p.getFlags();
-          if (containsFlag(Flag.SYN, f)) {
-            inByteMessages.put(p.getPayload());
-            ackLock.set(true);
-            Flag[] flags = {Flag.ACK};
-            oos.writeObject(new Packet(flags, null));
-          } else if (containsFlag(Flag.ACK, f)) {
-            ackLock.set(false);
-          }
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    })).start();
-  }
+	public MigratoryOutputStream getOutputStream() {
+		return os;
+	}
 
-  protected void handleOutgoingPacket() {
-    (new Thread(() -> {
-      try {
-        while(true) {
-          while (ackLock.get()) {
-            //block
-          }
-          Flag[] flags = {Flag.SYN};
-          oos.writeObject(new Packet(flags, outByteMessages.take()));
-          ackLock.set(true);
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    })).start();
-  }
+	public MigratoryInputStream getInputStream() {
+		return is;
+	}
 
-  protected boolean containsFlag(Flag f, Flag[] flags) {
+	protected void handleIncomingPacket() {
+		(new Thread(() -> {
+			try {
+				while(true) {
+					Packet p = (Packet)ois.readObject();
+					Flag[] f = p.getFlags();
+					if (containsFlag(Flag.SYN, f)) {
+						inByteMessages.put(p.getPayload());
+						ackLock.set(true);
+						Flag[] flags = {Flag.ACK};
+						oos.writeObject(new Packet(flags, null));
+					} else if (containsFlag(Flag.ACK, f)) {
+						ackLock.set(false);
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		})).start();
+	}
+
+	protected void handleOutgoingPacket() {
+		(new Thread(() -> {
+			try {
+				while(true) {
+					while (ackLock.get()) {
+						//block
+					}
+					Flag[] flags = {Flag.SYN};
+					oos.writeObject(new Packet(flags, outByteMessages.take()));
+					ackLock.set(true);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		})).start();
+	}
+
+	protected boolean containsFlag(Flag f, Flag[] flags) {
 		for (Flag p : flags) {
 			if (p == f) return true;
 		}
 		return false;
 	}
+
+	protected final void logError(String msg) {
+		System.err.println(getLabel() + " {ERR} " + msg);
+	}
+
+	protected final void log(String msg) {
+		System.out.println(getLabel() + " " + msg);
+	}
+
+	protected abstract String getLabel();
 }

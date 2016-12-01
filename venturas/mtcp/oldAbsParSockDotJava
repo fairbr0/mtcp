@@ -42,14 +42,6 @@ public abstract class AbstractMigratableParentSocket {
 		return qis;
 	}
 
-	protected final void logError(String msg) {
-		System.err.println(loggingLabel + " {ERR} " + msg);
-	}
-
-	protected final void log(String msg) {
-		System.out.println(loggingLabel + " " + msg);
-	}
-
 	protected abstract void performInitialHandshake() throws MTCPHandshakeException, MTCPMigrationException, IOException, ClassNotFoundException;
 
 	protected boolean containsFlag(Flag f, Flag[] flags) {

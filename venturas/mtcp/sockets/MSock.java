@@ -10,24 +10,36 @@ import venturas.mtcp.io.*;
 
 public class MSock extends AbstractMSock {
 
-  public MSock(InetAddress address, int port) throws Exception {
-    super(new Socket(address, port));
-  }
+	private List<AddressPortTuple> otherServers;
 
-  protected void initialHandshake()
-  throws IOException, ClassNotFoundException, MTCPHandshakeException {
-	Flag[] syn = {Flag.SYN};
-	oos.writeObject(new Packet(syn, null));
-	oos.flush();
-	Flag[] response = ((Packet)ois.readObject()).getFlags();
-	if (containsFlag(Flag.SYN, response) && containsFlag(Flag.ACK, response)) {
-		if (response.length != 2) {
-			throw new MTCPHandshakeException("SYN,ACK, but wrong length");
-		}
-	} else {
-		throw new MTCPHandshakeException("Did not get SYN,ACK");
+	public MSock(InetAddress address, int port) throws Exception {
+		super(new Socket(address, port));
+		//initialHandshake will be called by super, amongst others
 	}
-	Flag[] ack = {Flag.ACK};
-	oos.writeObject(new Packet(ack, null));
-  }
+
+	protected void initialHandshake()
+	throws IOException, ClassNotFoundException, MTCPHandshakeException {
+		ackLock.set(true);
+		Flag[] syn = {Flag.SYN};
+		oos.writeObject(new InternalPacket(syn, null));
+		oos.flush();
+		InternalPacket<List<AddressPortTuple>> response = (InternalPacket<List<AddressPortTuple>>)ois.readObject();
+		Flag[] responseFlags = response.getFlags();
+		if (containsFlag(Flag.SYN, responseFlags) && containsFlag(Flag.ACK, responseFlags)) {
+			if (responseFlags.length != 2) {
+				throw new MTCPHandshakeException("SYN,ACK, but wrong length");
+			}
+		} else {
+			throw new MTCPHandshakeException("Did not get SYN,ACK");
+		}
+		this.otherServers = response.getPayload();
+		Flag[] ack = {Flag.ACK};
+		oos.writeObject(new InternalPacket(ack, null));
+		oos.flush();
+		ackLock.set(false);
+	}
+
+	protected String getLabel() {
+		return "<MSock>";
+	}
 }

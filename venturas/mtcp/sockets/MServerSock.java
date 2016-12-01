@@ -9,15 +9,53 @@ import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
 public class MServerSock extends AbstractMSock {
-
 	private List<AddressPortTuple> otherServers;
     private State latestState;
+	private int clientPort;
+	private int serverPort;
+	private Socket otherServer;
+	private boolean hasClient;
 
-
-  	public MServerSock(int port) throws Exception {
-		//setup list of servers
-		super((new ServerSocket(port)).accept());
+  	public MServerSock(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException, MTCPHandshakeException {
+		//TODO setup list of servers
+		super(); //does nothing
+		this.clientPort = clientPort;
+		this.serverPort = serverPort;
+		this.hasClient = false;
+		this.otherServers = otherServers;
   	}
+
+	/** This is NOT blocking **/
+	public void accept() {
+		this.acceptServer();
+		this.acceptClient();
+	}
+
+	//TODO implement me
+	private void acceptServer() {
+		(new Thread(() -> {
+			//TODO implement me
+			logError("acceptServer() worked, but needs implementation");
+		})).start();
+	}
+
+	private void acceptClient() {
+		(new Thread(() -> {
+			try {
+				ServerSocket ss = new ServerSocket(clientPort);
+				System.err.println("made ss, now to super.acceptClient!");
+				super.acceptClient(ss.accept());
+				System.err.println("super.acceptClient did its work, WHAT THE FUCK IS WRONG");
+				hasClient = true;
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (MTCPHandshakeException e) {
+				e.printStackTrace();
+			}
+		})).start();
+	}
 
 	public void exportState(State state) {
         this.latestState = state;
@@ -63,7 +101,7 @@ public class MServerSock extends AbstractMSock {
 
     }
 
-    public Socket getSocketFromMapping(InetAddress address, int port) throws IOException{
+    public Socket getSocketFromMapping(InetAddress address, int port) throws IOException, MTCPMigrationException {
         int mappedPort = 0;
         InetAddress mappedAddress = null;
         Iterator<AddressPortTuple> it = otherServers.iterator();
@@ -89,11 +127,39 @@ public class MServerSock extends AbstractMSock {
         return server;
     }
 
-  	protected void initialHandshake() {
-		//wait for SYN
-		//send SYN,ACK
-		//wait for ACK
+  	protected void initialHandshake() throws IOException, ClassNotFoundException, MTCPHandshakeException {
+		ackLock.set(true);
+		InternalPacket p = (InternalPacket)ois.readObject();
+		if (p.getFlags().length != 1) {
+			throw new MTCPHandshakeException("got wrong no. of flags on expected SYN");
+		}
+		if (!containsFlag(Flag.SYN, p.getFlags())) {
+			throw new MTCPHandshakeException("did not get SYN");
+		}
+		Flag[] synAck = {Flag.SYN, Flag.ACK};
+		oos.writeObject(new InternalPacket(synAck, getClientMapping()));
+		oos.flush();
+		Flag[] ackResponse = ((InternalPacket)ois.readObject()).getFlags();
+		if (ackResponse.length != 1) {
+			throw new MTCPHandshakeException("got wrong no. of flags on expected ACK");
+		}
+		if (!containsFlag(Flag.ACK, ackResponse)) {
+			throw new MTCPHandshakeException("did not get ACK");
+		}
+		//got ack, yay!
+		ackLock.set(false);
   	}
+
+	private List<AddressPortTuple> getClientMapping() {
+		List<AddressPortTuple> result = new LinkedList<AddressPortTuple>();
+		Iterator<AddressPortTuple> it = otherServers.iterator();
+		while (it.hasNext()) {
+			AddressPortTuple next = it.next();
+			AddressPortTuple clientNext = new AddressPortTuple(next.getAddress(), next.getPorts()[0]);
+			result.add(clientNext);
+		}
+		return result;
+	}
 
 	@Override
 	public void handleIncomingPacket() {
@@ -137,4 +203,13 @@ public class MServerSock extends AbstractMSock {
         }
       })).start();
     }
+
+	protected String getLabel() {
+		return "<MServerSock>";
+	}
+
+	public boolean hasClient() {
+		return hasClient;
+	}
+
 }
