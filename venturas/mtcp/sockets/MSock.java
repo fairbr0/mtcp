@@ -37,9 +37,11 @@ public class MSock extends AbstractMSock {
 		oos.writeObject(new InternalPacket(ack, null));
 		oos.flush();
 		ackLock.set(false);
+		log("Handshake complete");
 	}
 
 	protected String getLabel() {
 		return "<MSock>";
 	}
+
 }

@@ -3,6 +3,7 @@ package venturas.app;
 import venturas.mtcp.io.*;
 import venturas.mtcp.sockets.*;
 
+import java.util.LinkedList;
 import java.net.*;
 
 public class TestCliApp {
@@ -13,9 +14,9 @@ public class TestCliApp {
         log("did socket");
         MigratoryObjectInputStream ois = new MigratoryObjectInputStream(c.getInputStream());
         log("got in stream");
-        String result = (String) ois.readObject();
+        LinkedList<String> result = (LinkedList<String>) ois.readObject();
         log("result found!");
-        System.err.println(result);
+        System.err.println(result.toString());
     }
 
     private static void logError(Object o) {

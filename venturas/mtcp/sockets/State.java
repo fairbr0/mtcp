@@ -9,8 +9,7 @@ public class State<T> {
     public State(T state) {
         this.state = state;
         this.bufferIn = new LinkedList<byte[]>();
-        this.bufferOut = new LinkedList<byte[]>
-        ();
+        this.bufferOut = new LinkedList<byte[]>();
     }
 
     public void setState(T state) {

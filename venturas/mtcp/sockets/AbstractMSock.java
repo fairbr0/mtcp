@@ -59,15 +59,24 @@ public abstract class AbstractMSock {
 					Packet p = (Packet)ois.readObject();
 					Flag[] f = p.getFlags();
 					if (containsFlag(Flag.SYN, f)) {
+						log("Got packet");
 						inByteMessages.put(p.getPayload());
 						ackLock.set(true);
+						log("Wrote ACK");
 						Flag[] flags = {Flag.ACK};
 						oos.writeObject(new Packet(flags, null));
 					} else if (containsFlag(Flag.ACK, f)) {
 						ackLock.set(false);
+						log("ACK");
 					}
 				}
-			} catch (Exception e) {
+			} catch (SocketTimeoutException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		})).start();
@@ -80,11 +89,17 @@ public abstract class AbstractMSock {
 					while (ackLock.get()) {
 						//block
 					}
+					ackLock.set(true);
 					Flag[] flags = {Flag.SYN};
 					oos.writeObject(new Packet(flags, outByteMessages.take()));
-					ackLock.set(true);
+
+					log("Wrote Packet");
 				}
-			} catch (Exception e) {
+			} catch (SocketTimeoutException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		})).start();

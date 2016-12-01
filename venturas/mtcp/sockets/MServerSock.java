@@ -23,6 +23,7 @@ public class MServerSock extends AbstractMSock {
 		this.serverPort = serverPort;
 		this.hasClient = false;
 		this.otherServers = otherServers;
+		this.latestState = new State(null);
   	}
 
 	/** This is NOT blocking **/
@@ -98,6 +99,7 @@ public class MServerSock extends AbstractMSock {
         } else {
             throw new Exception();
         }
+		System.err.println("Handshake complete");
 
     }
 
@@ -169,13 +171,17 @@ public class MServerSock extends AbstractMSock {
             Packet p = (Packet)ois.readObject();
             Flag[] f = p.getFlags();
             if (containsFlag(Flag.SYN, f)) {
+				log("got data packet");
               inByteMessages.put(p.getPayload());
               this.latestState.addToBufferIn(p.getPayload());
               ackLock.set(true);
               Flag[] flags = {Flag.ACK};
               oos.writeObject(new Packet(flags, null));
+			  log("wrote ACK");
             } else if (containsFlag(Flag.ACK, f)) {
+				log("got ACK packet");
               ackLock.set(false);
+
             }
           }
         } catch (Exception e) {
@@ -196,6 +202,7 @@ public class MServerSock extends AbstractMSock {
             Flag[] flags = {Flag.SYN};
             byte[] outgoingBytes = outByteMessages.take();
             oos.writeObject(new Packet(flags, outgoingBytes));
+			log("Wrote Packet");
             this.latestState.addToBufferOut(outgoingBytes);
           }
         } catch (Exception e) {

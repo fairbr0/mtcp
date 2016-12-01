@@ -5,6 +5,7 @@ import venturas.mtcp.sockets.*;
 import java.net.*;
 import venturas.mtcp.io.*;
 import java.util.*;
+import java.util.LinkedList;
 
 public class TestSerApp {
   public static void main(String[] args) throws Exception {
@@ -17,7 +18,13 @@ public class TestSerApp {
 		try { Thread.sleep(3000); } catch (InterruptedException e) {}
 	}
 	System.err.println("Got my client!");
-    String str = "Hello there!";
+    LinkedList<String> str = new LinkedList<String>();
+    str.add("Jarred");
+    str.add("is");
+    str.add("a");
+    str.add("massive");
+    str.add("cunt");
+
 	System.err.println("Sending");
     MigratoryObjectOutputStream sout = new MigratoryObjectOutputStream(s.getOutputStream());
 	System.err.println("Sent! Now writing");
