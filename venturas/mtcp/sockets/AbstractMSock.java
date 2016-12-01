@@ -22,11 +22,11 @@ public abstract class AbstractMSock {
 		//do nothing
 	}
 
-	public AbstractMSock(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException {
+	public AbstractMSock(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		acceptClient(s);
 	}
 
-	protected void acceptClient(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException {
+	protected void acceptClient(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		socket = s;
 		oos = new ObjectOutputStream(socket.getOutputStream());
 		outByteMessages = new LinkedBlockingQueue<byte[]>();
@@ -41,8 +41,7 @@ public abstract class AbstractMSock {
 		handleOutgoingPacket();
 	}
 
-	protected abstract void initialHandshake()
-	throws IOException, ClassNotFoundException, MTCPHandshakeException;
+	protected abstract void initialHandshake() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException;
 
 	public MigratoryOutputStream getOutputStream() {
 		return os;
@@ -52,58 +51,9 @@ public abstract class AbstractMSock {
 		return is;
 	}
 
-	protected void handleIncomingPacket() {
-		(new Thread(() -> {
-			try {
-				while(true) {
-					Packet p = (Packet)ois.readObject();
-					Flag[] f = p.getFlags();
-					if (containsFlag(Flag.SYN, f)) {
-						log("Got packet");
-						inByteMessages.put(p.getPayload());
-						ackLock.set(true);
-						log("Wrote ACK");
-						Flag[] flags = {Flag.ACK};
-						oos.writeObject(new Packet(flags, null));
-					} else if (containsFlag(Flag.ACK, f)) {
-						ackLock.set(false);
-						log("ACK");
-					}
-				}
-			} catch (SocketTimeoutException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		})).start();
-	}
+	protected abstract void handleIncomingPacket() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException;
 
-	protected void handleOutgoingPacket() {
-		(new Thread(() -> {
-			try {
-				while(true) {
-					while (ackLock.get()) {
-						//block
-					}
-					ackLock.set(true);
-					Flag[] flags = {Flag.SYN};
-					oos.writeObject(new Packet(flags, outByteMessages.take()));
-
-					log("Wrote Packet");
-				}
-			} catch (SocketTimeoutException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		})).start();
-	}
+	protected abstract void handleOutgoingPacket();
 
 	protected boolean containsFlag(Flag f, Flag[] flags) {
 		for (Flag p : flags) {

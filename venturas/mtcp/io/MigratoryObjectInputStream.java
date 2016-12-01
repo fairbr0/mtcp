@@ -3,7 +3,7 @@ package venturas.mtcp.io;
 public class MigratoryObjectInputStream {
 
   public MigratoryInputStream bytes;
-  private static int arrayLength = 2048;
+  private static int arrayLength = SerializationUtils.arrayLength;
 
   public MigratoryObjectInputStream(MigratoryInputStream bytes) throws Exception {
     this.bytes = bytes;

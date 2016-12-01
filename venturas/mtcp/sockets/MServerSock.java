@@ -16,7 +16,7 @@ public class MServerSock extends AbstractMSock {
 	private Socket otherServer;
 	private boolean hasClient;
 
-  	public MServerSock(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException, MTCPHandshakeException {
+  	public MServerSock(int clientPort, int serverPort, List<AddressPortTuple> otherServers) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		//TODO setup list of servers
 		super(); //does nothing
 		this.clientPort = clientPort;
@@ -54,6 +54,8 @@ public class MServerSock extends AbstractMSock {
 				e.printStackTrace();
 			} catch (MTCPHandshakeException e) {
 				e.printStackTrace();
+			} catch (MTCPMigrationException e) {
+				e.printStackTrace();
 			}
 		})).start();
 	}
@@ -69,7 +71,7 @@ public class MServerSock extends AbstractMSock {
         return this.latestState;
     }
 
-	public void migrate(InetAddress address, int port) throws Exception {
+	private void clientMigrationRequest(InetAddress address, int port) throws IOException, ClassNotFoundException, MTCPHandshakeException {
         //get actual address from mapping
         Socket s = getSocketFromMapping(address, port);
         ObjectOutputStream soos = new ObjectOutputStream(s.getOutputStream());
@@ -81,29 +83,28 @@ public class MServerSock extends AbstractMSock {
 
         InternalPacket<State> response = (InternalPacket<State>) sois.readObject();
 
-        if (containsFlag(Flag.RSP_STATE, flags)) {
-            //got the state back.
-            this.latestState = (State) response.getPayload();
-            Flag[] serverResponseFlags = {Flag.ACK};
-            soos.writeObject(new InternalPacket(serverResponseFlags));
-            try {
-                s.close();
-            } catch (Exception e) {
-                // catch the errors thrown by streams;
-            }
-
-            //tell the client that the migration was a success
-            Flag[] clientResponseFlags = {Flag.ACK, Flag.MIG};
-            this.oos.writeObject(new Packet(clientResponseFlags));
-
-        } else {
-            throw new Exception();
+        if (!containsFlag(Flag.RSP_STATE, flags)) {
+			throw new MTCPHandshakeException("Not got RSP_STATE flag");
+		}
+        //got the state back.
+        this.latestState = (State) response.getPayload();
+        Flag[] serverResponseFlags = {Flag.ACK};
+        soos.writeObject(new InternalPacket(serverResponseFlags));
+        try {
+            s.close();
+        } catch (Exception e) {
+            // catch the errors thrown by streams;
+			e.printStackTrace();
         }
+
+        //tell the client that the migration was a success
+        Flag[] clientResponseFlags = {Flag.ACK, Flag.MIG};
+        this.oos.writeObject(new Packet(clientResponseFlags));
 		System.err.println("Handshake complete");
 
     }
 
-    public Socket getSocketFromMapping(InetAddress address, int port) throws IOException, MTCPMigrationException {
+    public Socket getSocketFromMapping(InetAddress address, int port) throws IOException {
         int mappedPort = 0;
         InetAddress mappedAddress = null;
         Iterator<AddressPortTuple> it = otherServers.iterator();
@@ -116,11 +117,11 @@ public class MServerSock extends AbstractMSock {
                     if (ports[0] == port) {
                         mappedPort = ports[1];
                     } else {
-                        mappedPort = ports
-                        [0];
+                        mappedPort = ports[0];
                     }
                 } else {
-					throw new MTCPMigrationException();
+					//throw new Exception();
+					System.err.println("IF SEEING THIS, WE NEED TO BE THROWING AN EXCEPTION HERE, BUT A PROPER ONE RATHER THAN MTCPHS/MTCPMIG/ETC");
 				}
                 break;
             }
@@ -129,7 +130,7 @@ public class MServerSock extends AbstractMSock {
         return server;
     }
 
-  	protected void initialHandshake() throws IOException, ClassNotFoundException, MTCPHandshakeException {
+  	protected void initialHandshake() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		ackLock.set(true);
 		InternalPacket p = (InternalPacket)ois.readObject();
 		if (p.getFlags().length != 1) {
@@ -137,6 +138,12 @@ public class MServerSock extends AbstractMSock {
 		}
 		if (!containsFlag(Flag.SYN, p.getFlags())) {
 			throw new MTCPHandshakeException("did not get SYN");
+		}
+		if (containsFlag(Flag.MIG, p.getFlags())) {
+			AddressPortTuple s1 = (AddressPortTuple)p.getPayload();
+			clientMigrationRequest(s1.getAddress(), s1.getPort(0));
+			ackLock.set(false);
+			return;
 		}
 		Flag[] synAck = {Flag.SYN, Flag.ACK};
 		oos.writeObject(new InternalPacket(synAck, getClientMapping()));
@@ -164,7 +171,7 @@ public class MServerSock extends AbstractMSock {
 	}
 
 	@Override
-	public void handleIncomingPacket() {
+	protected void handleIncomingPacket() throws IOException, ClassNotFoundException, MTCPHandshakeException {
       (new Thread(() -> {
         try {
           while(true) {
@@ -174,13 +181,15 @@ public class MServerSock extends AbstractMSock {
 				log("got data packet");
               inByteMessages.put(p.getPayload());
               this.latestState.addToBufferIn(p.getPayload());
-              ackLock.set(true);
               Flag[] flags = {Flag.ACK};
               oos.writeObject(new Packet(flags, null));
 			  log("wrote ACK");
             } else if (containsFlag(Flag.ACK, f)) {
 				log("got ACK packet");
               ackLock.set(false);
+
+
+			  socket.setSoTimeout(0);
 
             }
           }
@@ -191,7 +200,7 @@ public class MServerSock extends AbstractMSock {
     }
 
 	@Override
-    public void handleOutgoingPacket() {
+    protected void handleOutgoingPacket() {
       (new Thread(() -> {
         try {
           while(true) {
@@ -202,7 +211,12 @@ public class MServerSock extends AbstractMSock {
             Flag[] flags = {Flag.SYN};
             byte[] outgoingBytes = outByteMessages.take();
             oos.writeObject(new Packet(flags, outgoingBytes));
-			log("Wrote Packet");
+
+
+			socket.setSoTimeout(2000);
+
+
+			log("Wrote Packet with " + java.util.Arrays.toString(outgoingBytes));
             this.latestState.addToBufferOut(outgoingBytes);
           }
         } catch (Exception e) {

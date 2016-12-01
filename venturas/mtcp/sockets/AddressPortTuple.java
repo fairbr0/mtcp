@@ -49,6 +49,13 @@ public class AddressPortTuple implements Serializable {
 		return ports;
 	}
 
+	public int getPort(int i) {
+		if (i < 0 || i > 2) {
+			throw new java.lang.ArrayIndexOutOfBoundsException(i);
+		}
+		return ports[i];
+	}
+
 	public String toString() {
 		if (ports.length == 2) {
 			return address + "," + ports[0] + "," + ports[1];
