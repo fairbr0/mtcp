@@ -1,7 +1,8 @@
 package venturas.mtcp.sockets;
 import java.net.*;
 import java.io.*;
-public class NewUnusedNewUnusedAddressPortTuple implements Serializable {
+
+public class NewUnusedAddressPortTuple implements Serializable {
 	private final InetAddress publicAddress;
 	private final InetAddress privateAddress;
 	private final Integer clientPort;
