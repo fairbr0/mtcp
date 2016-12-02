@@ -229,6 +229,9 @@ public class MServerSock extends AbstractMSock {
   	}
 
 	private List<AddressPortTuple> getClientMapping() {
+		if (this.serverList == null ) {
+			return new LinkedList<AddressPortTuple>();
+		}
 		List<AddressPortTuple> result = new LinkedList<AddressPortTuple>();
 		Iterator<AddressPortTuple> it = serverList.iterator();
 		while (it.hasNext()) {
