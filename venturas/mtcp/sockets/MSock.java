@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.*;
 import java.util.concurrent.*;
 import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
+import  java.util.Arrays;
 
 public class MSock extends AbstractMSock {
 
@@ -18,6 +19,7 @@ public class MSock extends AbstractMSock {
 		super(new Socket(address, port));
 		this.s1Address = address;
 		this.s1Port = port;
+		socket.setSoTimeout(7000);
 
 		//initialHandshake will be called by super, amongst others
 	}
@@ -55,7 +57,7 @@ public class MSock extends AbstractMSock {
 
 	/* Pre: C is connected to S1, but connected has already degraded
 	 * Post: C is connected to S2 */
-	public void migrate() throws IOException, ClassNotFoundException, MTCPMigrationException {
+	private void migrate() throws IOException, ClassNotFoundException, MTCPMigrationException {
 		log("MIGRATION CALLED");
 		ackLock.set(true);
 		//Pick S2 from list in FIFO strategy
@@ -63,7 +65,33 @@ public class MSock extends AbstractMSock {
 			throw new MTCPMigrationException("No servers to migrate to");
 		}
 		//construct socket and streams to S2
-		AddressPortTuple s2AddressPort = otherServers.remove(0);
+		AddressPortTuple s2AddressPort = null;
+		Iterator<AddressPortTuple> it = otherServers.iterator();
+
+
+		System.err.println("socket addy:" + socket.getInetAddress());
+		System.err.println("socket port:" + socket.getPort());
+
+		while (it.hasNext()) {
+			s2AddressPort = it.next();
+			if (s2AddressPort.getAddress().equals(socket.getInetAddress())) {
+				if (s2AddressPort.getPort(0) == socket.getPort()) {
+
+				} else {
+					//we've found another port
+					break;
+				}
+			} else {
+				//we've found another address
+				break;
+			}
+		}
+		if (s2AddressPort == null) {
+			throw new MTCPMigrationException("No servers to migrate to");
+		}
+
+		log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2AddressPort.toString());
+
 		Socket s2Socket = new Socket(s2AddressPort.getAddress(), s2AddressPort.getPort(0));
 		log("Created s2Socket");
 		ObjectOutputStream s2oos = new ObjectOutputStream(s2Socket.getOutputStream());
@@ -106,6 +134,7 @@ public class MSock extends AbstractMSock {
 		log("Changing socket over now");
 		log("s2Socket port number = " + s2Socket.getPort());
 		super.socket = s2Socket;
+		super.socket.setSoTimeout(7000);
 		super.oos = s2oos;
 		super.ois = s2ois;
 		ackLock.set(false);
@@ -122,7 +151,9 @@ public class MSock extends AbstractMSock {
 					ackLock.set(true);
 					Flag[] flags = {Flag.MESSAGE};
 					log("soTimeOut outgoing listener: " + socket.getSoTimeout());
-					oos.writeObject(new Packet(flags, outByteMessages.take()));
+					byte[] message = outByteMessages.take();
+					log("about to write packet:" + Arrays.toString(message));
+					oos.writeObject(new Packet(flags, message));
 					log("Wrote Packet");
 				}
 			} catch (SocketTimeoutException e) {
@@ -138,6 +169,7 @@ public class MSock extends AbstractMSock {
 	protected void handleIncomingPacket() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		(new Thread(() -> {
 			while(true) {
+				log("listening for packet");
 				try {
 					log("soTimeOut incomingListener: " + socket.getSoTimeout());
 					Packet p = (Packet)ois.readObject();
@@ -159,6 +191,7 @@ public class MSock extends AbstractMSock {
 					try {
 						log("lock state: " + ackLock.get());
 						migrate();
+						log("We've just returned from the migrate");
 					} catch (MTCPMigrationException e1) {
 						e1.printStackTrace();
 					} catch (Exception e1) {
