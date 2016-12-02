@@ -152,7 +152,6 @@ public class MSock extends AbstractMSock {
 					Flag[] flags = {Flag.MESSAGE};
 					log("soTimeOut outgoing listener: " + socket.getSoTimeout());
 					byte[] message = outByteMessages.take();
-					log("about to write packet:" + Arrays.toString(message));
 					oos.writeObject(new Packet(flags, message));
 					log("Wrote Packet");
 				}

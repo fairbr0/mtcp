@@ -22,7 +22,6 @@ public class MigratoryInputStream {
 	public byte[] readBytes() throws InterruptedException {
 		//following will BLOCK until queue not empty
 		byte[] returnval = this.stream.take();
-		System.out.println("took of blocking queue: " + java.util.Arrays.toString(returnval));
 		return returnval;
 	}
 }

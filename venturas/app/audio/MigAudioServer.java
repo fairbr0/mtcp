@@ -7,48 +7,91 @@ import java.util.*;
 import venturas.mtcp.io.*;
 import venturas.mtcp.sockets.*;
 
+import javax.sound.sampled.*;
+
 public class MigAudioServer {
+    MServerSock client;
+    MigratoryInputStream is;
+    MigratoryOutputStream os;
+    MigratoryObjectOutputStream oos;
+    MigratoryObjectInputStream ois;
+    private boolean stream = false;
+
     public static void main(String[] args) throws Exception {
+        MigAudioServer server = new MigAudioServer();
+        server.run(args);
+    }
+
+    public void run(String args[]) throws Exception {
         if (args.length == 0) {
             throw new IllegalArgumentException("expected sound file arg");
         }
         File soundFile = AudioUtil.getSoundFile(args[0]);
 
         System.out.println("server: " + soundFile);
+        AudioFormat format;
 
         try (FileInputStream in = new FileInputStream(soundFile)) {
-            MServerSock client = new MServerSock(9030, 10030, null);
+            BufferedInputStream bis = new BufferedInputStream(in);
+            AudioInputStream ais = AudioSystem.getAudioInputStream(bis);
+            format = ais.getFormat();
+            ais.close();
+        }
+
+        try (FileInputStream in = new FileInputStream(soundFile)) {
+
+            client = new MServerSock(9030, 10030, null);
+
             client.accept();
             while (!client.hasClient()) {
                 //block;
                 Thread.sleep(5);
             }
-            System.out.println("about to stream");
-            MigratoryOutputStream out = client.getOutputStream();
+            this.os = client.getOutputStream();
+            this.is = client.getInputStream();
+            this.oos = new MigratoryObjectOutputStream(this.os);
+            this.ois = new MigratoryObjectInputStream(this.is);
 
+            System.out.println("Connected to client");
+            String msg = (String) ois.readObject();
+            if (!msg.equals("Start")) {
+                System.out.println(msg);
+                throw new IOException();
+            }
+
+            String formatString = format.toString();
+            oos.writeObject(formatString);
+            System.out.println("About to ");
             byte bufferin[] = new byte[1024];
             //Byte buffer = new Byte[2048];
-            int count;
-            while ((count = in.read(bufferin)) != -1) {
+            int count = 0;
+            while (count != - 1) {
+                count = in.read(bufferin);
                 //toBytes(bufferin, buffer);
                 byte[] bufferOut = new byte[1024];
                 System.arraycopy(bufferin, 0, bufferOut, 0, 1024);
 
-                out.writeBytes(bufferOut);
-                System.out.println(Arrays.toString(bufferOut));
+                this.os.writeBytes(bufferOut);
                 try {
-                    Thread.sleep(0);
-      			} catch (InterruptedException e) {
+                    Thread.sleep(5);
+     			} catch (InterruptedException e) {
         			e.printStackTrace();
-        		}
-        	}
+    	        }
+            }
+
+            while (!this.stream) {
+                    //block
+            }
         }
         System.out.println("server: shutdown");
+
     }
+
+
+}
 
     /*public static void toBytes(byte[] buffer, Byte[] obuffer) {
         for (int i = 0; i < buffer.length; i++) {
             obuffer[i] = buffer[i];
         }
     }*/
-}
