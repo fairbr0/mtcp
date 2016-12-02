@@ -17,18 +17,27 @@ public class MigAudioServer {
         System.out.println("server: " + soundFile);
 
         try (FileInputStream in = new FileInputStream(soundFile)) {
-            SerializedShellServerSocket client = new SerializedShellServerSocket(9030);
+            MServerSock client = new MServerSock(9030, 10030, null);
+            client.accept();
+            while (!client.hasClient()) {
+                //block;
+                Thread.sleep(5);
+            }
+            System.out.println("about to stream");
             MigratoryOutputStream out = client.getOutputStream();
 
-            byte bufferin[] = new byte[2048];
+            byte bufferin[] = new byte[1024];
             //Byte buffer = new Byte[2048];
             int count;
             while ((count = in.read(bufferin)) != -1) {
                 //toBytes(bufferin, buffer);
-                out.writeBytes(bufferin);
-                System.out.println(Arrays.toString(bufferin));
+                byte[] bufferOut = new byte[1024];
+                System.arraycopy(bufferin, 0, bufferOut, 0, 1024);
+
+                out.writeBytes(bufferOut);
+                System.out.println(Arrays.toString(bufferOut));
                 try {
-                    Thread.sleep(5);
+                    Thread.sleep(0);
       			} catch (InterruptedException e) {
         			e.printStackTrace();
         		}

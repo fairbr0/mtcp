@@ -12,7 +12,7 @@ public class MigAudioClient {
 
     private MigratoryInputStream ois;
     private MigratoryOutputStream os;
-    private SerializedShellSocket socket;
+    private MSock socket;
 
     public static void main(String[] args) throws Exception {
         /*if (args.length > 0) {
@@ -24,7 +24,7 @@ public class MigAudioClient {
               }
             // play soundfile from server*/
         System.out.println("Client: reading from 127.0.0.1:6666");
-        SerializedShellSocket socket = new SerializedShellSocket((new InetSocketAddress("localhost", 9030)).getAddress(), 9030);
+        MSock socket = new MSock((new InetSocketAddress("localhost", 9030)).getAddress(), 9030);
         MigratoryInputStream in = socket.getInputStream();
         play(in);
 
@@ -40,7 +40,7 @@ public class MigAudioClient {
         SourceDataLine line = (SourceDataLine)AudioSystem.getLine(dataLineInfo);
         line.open(format);
         line.start();
-        byte tempBuffer[] = new byte[2048];
+        byte tempBuffer[] = new byte[1024];
 
         while (true) {
             tempBuffer = in.readBytes();
