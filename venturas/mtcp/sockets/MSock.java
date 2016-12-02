@@ -19,7 +19,7 @@ public class MSock extends AbstractMSock {
 		super(new Socket(address, port));
 		this.s1Address = address;
 		this.s1Port = port;
-		socket.setSoTimeout(7000);
+		socket.setSoTimeout(3000);
 
 		//initialHandshake will be called by super, amongst others
 	}
@@ -61,33 +61,22 @@ public class MSock extends AbstractMSock {
 		log("MIGRATION CALLED");
 		ackLock.set(true);
 		//Pick S2 from list in FIFO strategy
-		if (otherServers == null || otherServers.isEmpty()) {
+		if (otherServers == null || otherServers.isEmpty() || otherServers.size() == 0) {
 			throw new MTCPMigrationException("No servers to migrate to");
 		}
 		//construct socket and streams to S2
 		AddressPortTuple s2AddressPort = null;
-		Iterator<AddressPortTuple> it = otherServers.iterator();
-
-
-		System.err.println("socket addy:" + socket.getInetAddress());
-		System.err.println("socket port:" + socket.getPort());
-
-		while (it.hasNext()) {
-			s2AddressPort = it.next();
+		boolean foundOtherServer = false;
+		while (!foundOtherServer) {
+			int random = new Random().nextInt(otherServers.size());
+			s2AddressPort = otherServers.get(random);
 			if (s2AddressPort.getAddress().equals(socket.getInetAddress())) {
-				if (s2AddressPort.getPort(0) == socket.getPort()) {
-
-				} else {
-					//we've found another port
-					break;
+				if (s2AddressPort.getPort(0) != socket.getPort()) {
+					foundOtherServer = true;
 				}
 			} else {
-				//we've found another address
-				break;
+				foundOtherServer = true;
 			}
-		}
-		if (s2AddressPort == null) {
-			throw new MTCPMigrationException("No servers to migrate to");
 		}
 
 		log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2AddressPort.toString());
@@ -144,7 +133,7 @@ public class MSock extends AbstractMSock {
 			logError("CAUGHT AN EOFException on socket close");
 		}
 		super.socket = s2Socket;
-		super.socket.setSoTimeout(7000);
+		super.socket.setSoTimeout(3000);
 		super.oos = s2oos;
 		super.ois = s2ois;
 		this.s1Address = s2AddressPort.getAddress();

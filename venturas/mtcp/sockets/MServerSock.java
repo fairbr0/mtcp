@@ -183,6 +183,7 @@ public class MServerSock extends AbstractMSock {
     public Socket getSocketFromMapping(InetAddress address, int port) throws IOException {
         int mappedPort = 0;
         InetAddress mappedAddress = null;
+		System.err.println("[[[[[[[" + serverList.toString() + "]]]]]]]");
         Iterator<AddressPortTuple> it = serverList.iterator();
         while (it.hasNext()) {
             AddressPortTuple tuple = it.next();
@@ -200,7 +201,9 @@ public class MServerSock extends AbstractMSock {
 					System.err.println("IF SEEING THIS, WE NEED TO BE THROWING AN EXCEPTION HERE, BUT A PROPER ONE RATHER THAN MTCPHS/MTCPMIG/ETC");
 				}
                 break;
-            }
+            } else {
+				System.err.println("+++++++++++++++" + address.toString() + ",,,,," + port);
+			}
         }
 		log("Found socket mapping");
         Socket server = new Socket(mappedAddress, mappedPort);

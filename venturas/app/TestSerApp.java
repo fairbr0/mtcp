@@ -50,7 +50,7 @@ public class TestSerApp {
 			log("Okay, I'm gonna read something");
 			byte[] b = qis.readBytes();
 			log("Got " + b[0]);
-			Thread.sleep(1000);
+			Thread.sleep(500);
 			// if (b[0] == 5) {
 			// 	log("Forcing MEGA-long sleep on i == 5");
 			// 	Thread.sleep(1000);

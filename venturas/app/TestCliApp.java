@@ -26,9 +26,9 @@ public class TestCliApp {
 			qos.writeBytes(b);
 			log("Write " + b[0] + ", increment and then loop");
 			i += 1;
-			if (i % 10 == 0) {
+			if (i % 5 == 0) {
 				log("========SLEEPING NOW=======");
-				Thread.sleep(8000);
+				Thread.sleep(4000);
 				log("Awaaaaaaaaaaaaaaaaaake");
 			}
 		}
