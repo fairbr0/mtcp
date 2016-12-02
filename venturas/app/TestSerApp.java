@@ -10,7 +10,7 @@ public class TestSerApp {
 
 	//java Server {me} {everyone}
 	//e.g. Two parties:
-	//	 java Server localhost:9030:10030 localhost:9030:10030,localhost:9031:10031
+	//	 java Server public:9030:private:10030 localhost:9030:10030,localhost:9031:10031
 	//	 java Server localhost:9031:10031 localhost:9030:10030,localhost:9031:10031
 
 	public static void main(String args[]) throws Exception {
@@ -22,16 +22,16 @@ public class TestSerApp {
 
 		String[] me = args[0].split(":");
 		String[] all = args[1].split(",");
-		List<AddressPortTuple> otherServers = new LinkedList<>();
+		List<AddressMapping> otherServers = new LinkedList<>();
 		for (String server : all) {
 			String[] addrPort = server.split(":");
-			AddressPortTuple apt = new AddressPortTuple(addrPort[0], Integer.parseInt(addrPort[1]), Integer.parseInt(addrPort[2]));
+			AddressMapping apt = new AddressMapping(addrPort[0], Integer.parseInt(addrPort[1]), addrPort[2], Integer.parseInt(addrPort[3]));
 			otherServers.add(apt);
 		}
 		log("OTHERS:" + otherServers.toString());
 		log("ME:" + java.util.Arrays.toString(me));
 
-        MServerSock serverSocket = new MServerSock(Integer.parseInt(me[1]), Integer.parseInt(me[2]), otherServers);
+        MServerSock serverSocket = new MServerSock(Integer.parseInt(me[1]), Integer.parseInt(me[3]), otherServers);
 		serverSocket.accept();
 
         while (!serverSocket.hasClient()) {

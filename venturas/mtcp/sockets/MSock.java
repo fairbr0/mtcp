@@ -11,7 +11,7 @@ import  java.util.Arrays;
 
 public class MSock extends AbstractMSock {
 
-	private List<AddressPortTuple> otherServers;
+	private List<AddressMapping> otherServers;
 	private InetAddress s1Address;
 	private int s1Port;
 
@@ -30,7 +30,7 @@ public class MSock extends AbstractMSock {
 		oos.writeObject(new InternalPacket(syn, null));
 		oos.flush();
 		log("SYN sent");
-		InternalPacket<List<AddressPortTuple>> response = (InternalPacket<List<AddressPortTuple>>)ois.readObject();
+		InternalPacket<List<AddressMapping>> response = (InternalPacket<List<AddressMapping>>)ois.readObject();
 		log("Got response. SYN, ACK Expected:");
 		Flag[] responseFlags = response.getFlags();
 		if (containsFlag(Flag.SYN, responseFlags) && containsFlag(Flag.ACK, responseFlags)) {
@@ -65,13 +65,13 @@ public class MSock extends AbstractMSock {
 			throw new MTCPMigrationException("No servers to migrate to");
 		}
 		//construct socket and streams to S2
-		AddressPortTuple s2AddressPort = null;
+		AddressMapping s2Mapping = null;
 		boolean foundOtherServer = false;
 		while (!foundOtherServer) {
 			int random = new Random().nextInt(otherServers.size());
-			s2AddressPort = otherServers.get(random);
-			if (s2AddressPort.getAddress().equals(socket.getInetAddress())) {
-				if (s2AddressPort.getPort(0) != socket.getPort()) {
+			s2Mapping = otherServers.get(random);
+			if (s2Mapping.getPublicAddress().equals(socket.getInetAddress())) {
+				if (s2Mapping.getPublicPort() != socket.getPort()) {
 					foundOtherServer = true;
 				}
 			} else {
@@ -79,9 +79,9 @@ public class MSock extends AbstractMSock {
 			}
 		}
 
-		log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2AddressPort.toString());
+		log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2Mapping.toString());
 
-		Socket s2Socket = new Socket(s2AddressPort.getAddress(), s2AddressPort.getPort(0));
+		Socket s2Socket = new Socket(s2Mapping.getPublicAddress(), s2Mapping.getPublicPort());
 		log("Created s2Socket");
 		ObjectOutputStream s2oos = new ObjectOutputStream(s2Socket.getOutputStream());
 		ObjectInputStream s2ois = new ObjectInputStream(s2Socket.getInputStream());
@@ -91,9 +91,9 @@ public class MSock extends AbstractMSock {
 		Flag[] synMig = {Flag.SYN, Flag.MIG};
 		InetAddress currentAdd = this.s1Address;
 		int currentPort = this.s1Port;
-		AddressPortTuple apt = new AddressPortTuple(currentAdd, currentPort);
+		AddressMapping apt = new AddressMapping(currentAdd, currentPort);
 		System.err.println("I am telling my new server than the current server I wanna migrate AWAY from is " + apt.toString());
-		s2oos.writeObject(new InternalPacket(synMig, new AddressPortTuple(s1Address, s1Port)));
+		s2oos.writeObject(new InternalPacket(synMig, new AddressMapping(s1Address, s1Port)));
 		log("wrote SYN MIG");
 
 		// Wait for expected ACK, MIG
@@ -136,8 +136,8 @@ public class MSock extends AbstractMSock {
 		super.socket.setSoTimeout(3000);
 		super.oos = s2oos;
 		super.ois = s2ois;
-		this.s1Address = s2AddressPort.getAddress();
-		this.s1Port = s2AddressPort.getPort(0);
+		this.s1Address = s2Mapping.getPublicAddress();
+		this.s1Port = s2Mapping.getPublicPort();
 		ackLock.set(false);
 		log("Socket changed now. Lock state: " + ackLock.get());
 	}

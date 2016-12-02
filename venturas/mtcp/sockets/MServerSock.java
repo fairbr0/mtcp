@@ -9,33 +9,33 @@ import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
 public class MServerSock extends AbstractMSock {
-	private List<AddressPortTuple> serverList;
+	private List<AddressMapping> serverList;
     private State latestState;
-	private int clientPort;
-	private int serverPort;
+	private int publicPort;
+	private int privatePort;
 	private Socket otherServer;
 	private boolean hasClient;
 	private int counter = 0;
 	private ServerSocket ssServer;
 	private ServerSocket ssClient;
 
-  	public MServerSock(int clientPort, int serverPort, List<AddressPortTuple> serverList) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
+  	public MServerSock(int publicPort, int privatePort, List<AddressMapping> serverList) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		//TODO setup list of servers
 		super();
-		init(clientPort, serverPort, serverList);
-		this.ssServer = new ServerSocket(serverPort);
-		this.ssClient = new ServerSocket(clientPort);
+		init(publicPort, privatePort, serverList);
+		this.ssServer = new ServerSocket(privatePort);
+		this.ssClient = new ServerSocket(publicPort);
   	}
 
 	private void reinit() throws IOException {
-		init(this.clientPort, this.serverPort, this.serverList);
+		init(this.publicPort, this.privatePort, this.serverList);
 		accept();
 	}
 
-	private void init(int clientPort, int serverPort, List<AddressPortTuple> serverList) throws IOException {
+	private void init(int publicPort, int privatePort, List<AddressMapping> serverList) throws IOException {
 		//normal constructor would call super(), probably don't need that hear/ nor is it possible without redesign
-		this.clientPort = clientPort;
-		this.serverPort = serverPort;
+		this.publicPort = publicPort;
+		this.privatePort = privatePort;
 		this.serverList = serverList;
 		this.hasClient = false;
 		this.latestState = new State(null);
@@ -184,22 +184,12 @@ public class MServerSock extends AbstractMSock {
         int mappedPort = 0;
         InetAddress mappedAddress = null;
 		System.err.println("[[[[[[[" + serverList.toString() + "]]]]]]]");
-        Iterator<AddressPortTuple> it = serverList.iterator();
+        Iterator<AddressMapping> it = serverList.iterator();
         while (it.hasNext()) {
-            AddressPortTuple tuple = it.next();
-            if (address.equals(tuple.getAddress()) && port == tuple.getPort(0)) {
-                mappedAddress = tuple.getAddress();
-                int[] ports = tuple.getPorts();
-                if (ports.length == 2) {
-                    if (ports[0] == port) {
-                        mappedPort = ports[1];
-                    } else {
-                        mappedPort = ports[0];
-                    }
-                } else {
-					//throw new Exception();
-					System.err.println("IF SEEING THIS, WE NEED TO BE THROWING AN EXCEPTION HERE, BUT A PROPER ONE RATHER THAN MTCPHS/MTCPMIG/ETC");
-				}
+            AddressMapping mapping = it.next();
+            if (mapping.corresponds(address, port)) {
+                mappedAddress = mapping.getPrivateAddress();
+                mappedPort = mapping.getPrivatePort();
                 break;
             } else {
 				System.err.println("+++++++++++++++" + address.toString() + ",,,,," + port);
@@ -224,8 +214,8 @@ public class MServerSock extends AbstractMSock {
 		}
 		if (containsFlag(Flag.MIG, p.getFlags())) {
 			log("Got SYN, MIG. Beginning server migration.");
-			AddressPortTuple s1 = (AddressPortTuple)p.getPayload();
-			clientMigrationRequest(s1.getAddress(), s1.getPort(0));
+			AddressMapping s1 = (AddressMapping)p.getPayload();
+			clientMigrationRequest(s1.getPublicAddress(), s1.getPublicPort());
 			log("Server ready");
 			ackLock.set(false);
 			return;
@@ -250,15 +240,15 @@ public class MServerSock extends AbstractMSock {
 		log("Socket Ready");
   	}
 
-	private List<AddressPortTuple> getClientMapping() {
+	private List<AddressMapping> getClientMapping() {
 		if (this.serverList == null ) {
-			return new LinkedList<AddressPortTuple>();
+			return new LinkedList<AddressMapping>();
 		}
-		List<AddressPortTuple> result = new LinkedList<AddressPortTuple>();
-		Iterator<AddressPortTuple> it = serverList.iterator();
+		List<AddressMapping> result = new LinkedList<AddressMapping>();
+		Iterator<AddressMapping> it = serverList.iterator();
 		while (it.hasNext()) {
-			AddressPortTuple next = it.next();
-			AddressPortTuple clientNext = new AddressPortTuple(next.getAddress(), next.getPorts()[0]);
+			AddressMapping next = it.next();
+			AddressMapping clientNext = next.getPublicOnlyAddressMapping();
 			result.add(clientNext);
 		}
 		return result;
