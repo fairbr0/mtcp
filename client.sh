@@ -1,2 +1,2 @@
 #!/bin/bash
-java venturas/app/Client &
+java venturas/app/TestCliApp localhost 9031 &

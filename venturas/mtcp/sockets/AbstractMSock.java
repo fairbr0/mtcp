@@ -17,6 +17,7 @@ public abstract class AbstractMSock {
 	ObjectOutputStream oos;
 	ObjectInputStream ois;
 	protected AtomicBoolean ackLock = new AtomicBoolean(false);
+	int timeout;
 
 	public AbstractMSock() {
 		//do nothing
@@ -71,4 +72,8 @@ public abstract class AbstractMSock {
 	}
 
 	protected abstract String getLabel();
+
+	public void setSoTimeout(int ms) {
+		this.timeout = ms;
+	}
 }

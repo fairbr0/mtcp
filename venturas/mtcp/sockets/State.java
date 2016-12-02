@@ -1,7 +1,8 @@
 package venturas.mtcp.sockets;
 import java.util.LinkedList;
+import java.io.Serializable;
 
-public class State<T> {
+public class State<T> implements Serializable {
     private T state;
     private LinkedList<byte[]> bufferIn;
     private LinkedList<byte[]> bufferOut;

@@ -10,6 +10,7 @@ public class MigratoryObjectOutputStream {
   }
 
   public void writeObject(Object o) throws Exception {
+      System.err.println(o.toString());
     byte[] b = SerializationUtils.toByteArray(o);
 
 	System.err.println("BYTEARR.LENGTH:" + b.length);
@@ -21,14 +22,13 @@ public class MigratoryObjectOutputStream {
     ByteObject values = new ByteObject();
 
     os.writeBytes(values.returnArray(padding, size, this.arrayLength));
-    byte[] buffer = new byte[arrayLength];
 
     for (int i = 0; i < size - 1; i++) {
+        byte[] buffer = new byte[arrayLength];
         System.arraycopy(b, i * arrayLength, buffer, 0, arrayLength);
         os.writeBytes(buffer);
     }
-
-    buffer = new byte[padding];
+    byte[] buffer = new byte[arrayLength];
     System.arraycopy(b, (size-1) * arrayLength, buffer, 0, padding);
     os.writeBytes(buffer);
 

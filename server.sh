@@ -26,4 +26,4 @@ me="localhost:$c:$s"
 echo $me
 
 #run!
-java venturas/app/Server $me $allServers 
+java venturas/app/TestSerApp $me $allServers

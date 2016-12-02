@@ -8,7 +8,7 @@ import java.io.*;
 
 public class SerializationUtils {
 
-    public static final int arrayLength = 256;
+    public static final int arrayLength = 1024;
 
     public static byte[] toByteArray(Object o) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
