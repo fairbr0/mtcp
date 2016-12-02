@@ -22,8 +22,8 @@ public class MServerSock extends AbstractMSock {
 		super(); //does nothing
 		this.clientPort = clientPort;
 		this.serverPort = serverPort;
-		this.hasClient = false;
 		this.serverList = serverList;
+		this.hasClient = false;
 		this.latestState = new State(null);
   	}
 
@@ -244,7 +244,24 @@ public class MServerSock extends AbstractMSock {
       (new Thread(() -> {
         try {
           while(true) {
-            Packet p = (Packet)ois.readObject();
+		 	System.err.println("£££££££££££££££££ waiting on a read yo");
+            Packet p = null;
+			try {
+				p = (Packet)ois.readObject();
+			} catch (EOFException e) {
+
+				logError("IMPLEMENT MEEEEEEEEEEEEE");
+				//gets in here after the migration. Need to rebirth self
+
+
+
+
+
+
+
+
+			}
+			System.err.println("&&&&&&&&&&&&&&&& did that read!");
             Flag[] f = p.getFlags();
             if (containsFlag(Flag.MESSAGE, f)) {
 				inByteMessages.put(p.getPayload());
@@ -263,7 +280,7 @@ public class MServerSock extends AbstractMSock {
 			  log("wrote ACK, btw timeout is " + socket.getSoTimeout());
             } else if (containsFlag(Flag.ACK, f)) {
 				log("got ACK packet");
-              ackLock.set(false);
+            	ackLock.set(false);
 
             }
           }

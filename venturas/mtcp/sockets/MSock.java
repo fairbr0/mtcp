@@ -133,6 +133,12 @@ public class MSock extends AbstractMSock {
 		 * communication */
 		log("Changing socket over now");
 		log("s2Socket port number = " + s2Socket.getPort());
+
+		try {
+			super.socket.close();
+		} catch (EOFException e) {
+			logError("CAUGHT AN EOFException on socket close");
+		}
 		super.socket = s2Socket;
 		super.socket.setSoTimeout(7000);
 		super.oos = s2oos;
