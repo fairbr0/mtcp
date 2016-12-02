@@ -20,21 +20,20 @@ public abstract class AbstractMSock {
 	int timeout;
 
 	public AbstractMSock() {
-		//do nothing
+		outByteMessages = new LinkedBlockingQueue<byte[]>();
+		inByteMessages = new LinkedBlockingQueue<byte[]>();
 	}
 
 	public AbstractMSock(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
+		this();
 		acceptClient(s);
 	}
 
 	protected void acceptClient(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		socket = s;
 		oos = new ObjectOutputStream(socket.getOutputStream());
-		outByteMessages = new LinkedBlockingQueue<byte[]>();
 		os = new MigratoryOutputStream(outByteMessages);
-
 		ois = new ObjectInputStream(socket.getInputStream());
-		inByteMessages = new LinkedBlockingQueue<byte[]>();
 		is = new MigratoryInputStream(inByteMessages);
 
 		initialHandshake();
