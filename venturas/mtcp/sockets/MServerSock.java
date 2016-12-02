@@ -16,17 +16,30 @@ public class MServerSock extends AbstractMSock {
 	private Socket otherServer;
 	private boolean hasClient;
 	private int counter = 0;
+	private ServerSocket ssServer;
+	private ServerSocket ssClient;
 
   	public MServerSock(int clientPort, int serverPort, List<AddressPortTuple> serverList) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		//TODO setup list of servers
-		super(); //does nothing
+		super();
+		init(clientPort, serverPort, serverList);
+		this.ssServer = new ServerSocket(serverPort);
+		this.ssClient = new ServerSocket(clientPort);
+  	}
+
+	private void reinit() throws IOException {
+		init(this.clientPort, this.serverPort, this.serverList);
+		accept();
+	}
+
+	private void init(int clientPort, int serverPort, List<AddressPortTuple> serverList) throws IOException {
+		//normal constructor would call super(), probably don't need that hear/ nor is it possible without redesign
 		this.clientPort = clientPort;
 		this.serverPort = serverPort;
 		this.serverList = serverList;
 		this.hasClient = false;
 		this.latestState = new State(null);
-  	}
-
+	}
 	/** This is NOT blocking **/
 	public void accept() {
 		this.acceptServer();
@@ -37,7 +50,7 @@ public class MServerSock extends AbstractMSock {
 	private void acceptServer() {
 		(new Thread(() -> {
 			try {
-				otherServer = (new ServerSocket(serverPort)).accept();
+				otherServer = ssServer.accept();
 				serverToServerHandshake();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -52,9 +65,8 @@ public class MServerSock extends AbstractMSock {
 	private void acceptClient() {
 		(new Thread(() -> {
 			try {
-				ServerSocket ss = new ServerSocket(clientPort);
 				System.err.println("made ss, now to super.acceptClient!");
-				super.acceptClient(ss.accept());
+				super.acceptClient(ssClient.accept());
 				System.err.println("super.acceptClient did its work");
 				hasClient = true;
 			} catch (IOException e) {
@@ -80,7 +92,7 @@ public class MServerSock extends AbstractMSock {
         return this.latestState;
     }
 
-	private void serverToServerHandshake() throws IOException, ClassNotFoundException, MTCPMigrationException {
+	private void serverToServerHandshake() throws IOException, ClassNotFoundException, MTCPMigrationException, MTCPHandshakeException {
 		log("serverToServerHandshake initiated");
 		ObjectOutputStream soos = new ObjectOutputStream(otherServer.getOutputStream());
         ObjectInputStream sois = new ObjectInputStream(otherServer.getInputStream());
@@ -110,8 +122,15 @@ public class MServerSock extends AbstractMSock {
 
 		log("yayayyay got an ACK yay");
 
+		try {
+			this.otherServer.close();
+			// this.acceptServer();
+			// this.handleIncomingPacket();
+		} catch (EOFException e) {
+			e.printStackTrace();
+		}
 
-
+		reinit();
 		//close shit off properly!!!!
 
 
@@ -167,7 +186,7 @@ public class MServerSock extends AbstractMSock {
         Iterator<AddressPortTuple> it = serverList.iterator();
         while (it.hasNext()) {
             AddressPortTuple tuple = it.next();
-            if (address.equals(tuple.getAddress())) {
+            if (address.equals(tuple.getAddress()) && port == tuple.getPort(0)) {
                 mappedAddress = tuple.getAddress();
                 int[] ports = tuple.getPorts();
                 if (ports.length == 2) {
@@ -198,7 +217,7 @@ public class MServerSock extends AbstractMSock {
 			throw new MTCPHandshakeException("got wrong no. of flags on expected SYN");
 		}
 		if (!containsFlag(Flag.SYN, p.getFlags())) {
-			throw new MTCPHandshakeException("did not get SYN");
+			throw new MTCPHandshakeException("did not get SYN, instead got:" + Arrays.toString(p.getFlags()));
 		}
 		if (containsFlag(Flag.MIG, p.getFlags())) {
 			log("Got SYN, MIG. Beginning server migration.");
@@ -244,57 +263,51 @@ public class MServerSock extends AbstractMSock {
 
 	@Override
 	protected void handleIncomingPacket() throws IOException, ClassNotFoundException, MTCPHandshakeException {
-      (new Thread(() -> {
-        try {
-          while(true) {
-		 	System.err.println("£££££££££££££££££ waiting on a read yo");
-            Packet p = null;
+		Thread t = new Thread(() -> {
 			try {
-				p = (Packet)ois.readObject();
-			} catch (EOFException e) {
+				while(true) {
+					System.err.println("£££££££££££££££££ waiting on a read yo");
+					Packet p = null;
+					try {
+						p = (Packet)ois.readObject();
+					} catch (EOFException e) {
+						logError("KILLLING MYSELF for reincarnation");
+						break;
+					}
+					System.err.println("&&&&&&&&&&&&&&&& did that read!");
+					Flag[] f = p.getFlags();
+					if (containsFlag(Flag.MESSAGE, f)) {
+						inByteMessages.put(p.getPayload());
+						this.latestState.addToBufferIn(p.getPayload());
+						Flag[] flags = {Flag.ACK};
 
-				logError("IMPLEMENT MEEEEEEEEEEEEE");
-				//gets in here after the migration. Need to rebirth self
+						if (counter == 50) {
+							log("Counter is 50!!!!");
+							try { Thread.sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
+						} else {
+							//   log("Counter is " + counter);
+						}
+						counter += 1;
 
+						oos.writeObject(new Packet(flags, null));
+						log("wrote ACK, btw timeout is " + socket.getSoTimeout());
+					} else if (containsFlag(Flag.ACK, f)) {
+						log("got ACK packet");
+						ackLock.set(false);
 
-
-
-
-
-
-
-			}
-			System.err.println("&&&&&&&&&&&&&&&& did that read!");
-            Flag[] f = p.getFlags();
-            if (containsFlag(Flag.MESSAGE, f)) {
-				inByteMessages.put(p.getPayload());
-				this.latestState.addToBufferIn(p.getPayload());
-				Flag[] flags = {Flag.ACK};
-
-			  	if (counter == 50) {
-					log("Counter is 50!!!!");
-					try { Thread.sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
-				} else {
-				//   log("Counter is " + counter);
+					}
 				}
-				counter += 1;
+				System.err.println("DEEEEEADDD");
 
-              oos.writeObject(new Packet(flags, null));
-			  log("wrote ACK, btw timeout is " + socket.getSoTimeout());
-            } else if (containsFlag(Flag.ACK, f)) {
-				log("got ACK packet");
-            	ackLock.set(false);
-
-            }
-          }
-	  } catch (SocketTimeoutException e) {
-		  logError("Socket timed out, but that's probably okay");
-          e.printStackTrace();
-	  } catch (Exception e) {
-		  e.printStackTrace();
-	  }
-      })).start();
-    }
+			} catch (SocketTimeoutException e) {
+				logError("Socket timed out, but that's probably okay");
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+		t.start();
+	}
 
 	@Override
     protected void handleOutgoingPacket() {

@@ -100,6 +100,10 @@ public class MSock extends AbstractMSock {
 
 		//write SYN MIG to S2
 		Flag[] synMig = {Flag.SYN, Flag.MIG};
+		InetAddress currentAdd = this.s1Address;
+		int currentPort = this.s1Port;
+		AddressPortTuple apt = new AddressPortTuple(currentAdd, currentPort);
+		System.err.println("I am telling my new server than the current server I wanna migrate AWAY from is " + apt.toString());
 		s2oos.writeObject(new InternalPacket(synMig, new AddressPortTuple(s1Address, s1Port)));
 		log("wrote SYN MIG");
 
@@ -143,6 +147,8 @@ public class MSock extends AbstractMSock {
 		super.socket.setSoTimeout(7000);
 		super.oos = s2oos;
 		super.ois = s2ois;
+		this.s1Address = s2AddressPort.getAddress();
+		this.s1Port = s2AddressPort.getPort(0);
 		ackLock.set(false);
 		log("Socket changed now. Lock state: " + ackLock.get());
 	}
