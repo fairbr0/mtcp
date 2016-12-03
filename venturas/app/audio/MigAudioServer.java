@@ -40,7 +40,16 @@ public class MigAudioServer {
 
         try (FileInputStream in = new FileInputStream(soundFile)) {
 
-            client = new MServerSock(9030, 10030, null);
+            String[] me = args[1].split(":");
+    		String[] all = args[2].split(",");
+    		List<AddressMapping> otherServers = new LinkedList<>();
+    		for (String server : all) {
+    			String[] addrPort = server.split(":");
+    			AddressMapping apt = new AddressMapping(addrPort[0], Integer.parseInt(addrPort[1]), addrPort[2], Integer.parseInt(addrPort[3]));
+    			otherServers.add(apt);
+    		}
+
+            MServerSock client = new MServerSock(Integer.parseInt(me[1]), Integer.parseInt(me[3]), otherServers);
 
             client.accept();
             while (!client.hasClient()) {

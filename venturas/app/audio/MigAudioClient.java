@@ -34,7 +34,7 @@ public class MigAudioClient {
               }
             // play soundfile from server*/
         System.out.println("Client: reading from 127.0.0.1:6666");
-        MSock socket = new MSock((new InetSocketAddress("localhost", 9030)).getAddress(), 9030);
+        MSock socket = new MSock((new InetSocketAddress(args[0], 9030)).getAddress(), 9030);
         this.os = socket.getOutputStream();
         this.is = socket.getInputStream();
         this.oos = new MigratoryObjectOutputStream(this.os);
