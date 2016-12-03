@@ -40,7 +40,6 @@ public class ServerCounter {
 				Thread.sleep(1000);
         	}
 			State<Byte> state = serverSocket.importState();
-
 			log("Got past accept call (remember, is non blocking)");
 			MigratoryOutputStream qos = serverSocket.getOutputStream();
 			MigratoryInputStream qis = serverSocket.getInputStream();

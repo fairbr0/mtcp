@@ -26,19 +26,10 @@ public class MigAudioServer {
         if (args.length == 0) {
             throw new IllegalArgumentException("expected sound file arg");
         }
-        File soundFile = AudioUtil.getSoundFile(args[0]);
 
-        System.out.println("server: " + soundFile);
-        AudioFormat format;
+        AudioFormat format = AudioUtil.getAudioFormat(args[0]);
 
-        try (FileInputStream in = new FileInputStream(soundFile)) {
-            BufferedInputStream bis = new BufferedInputStream(in);
-            AudioInputStream ais = AudioSystem.getAudioInputStream(bis);
-            format = ais.getFormat();
-            ais.close();
-        }
-
-        try (FileInputStream in = new FileInputStream(soundFile)) {
+        try (RandomAccessFile in = AudioUtil.getRandomAccessFile(args[0])) {
 
             String[] me = args[1].split(":");
     		String[] all = args[2].split(",");
@@ -54,7 +45,7 @@ public class MigAudioServer {
             client.accept();
             while (!client.hasClient()) {
                 //block;
-                Thread.sleep(5);
+				Thread.sleep(5);
             }
             this.os = client.getOutputStream();
             this.is = client.getInputStream();
@@ -74,6 +65,10 @@ public class MigAudioServer {
             byte bufferin[] = new byte[1024];
             //Byte buffer = new Byte[2048];
             int count = 0;
+
+
+			in.seek(10000000);
+
             while (count != - 1) {
                 count = in.read(bufferin);
                 //toBytes(bufferin, buffer);
@@ -81,11 +76,11 @@ public class MigAudioServer {
                 System.arraycopy(bufferin, 0, bufferOut, 0, 1024);
 
                 this.os.writeBytes(bufferOut);
-                try {
-                    Thread.sleep(5);
-     			} catch (InterruptedException e) {
-        			e.printStackTrace();
-    	        }
+                // try {
+                // 	Thread.sleep(5);
+     		// 	} catch (InterruptedException e) {
+        		// 	e.printStackTrace();
+    	        // }
             }
 
             while (!this.stream) {
@@ -93,10 +88,7 @@ public class MigAudioServer {
             }
         }
         System.out.println("server: shutdown");
-
     }
-
-
 }
 
     /*public static void toBytes(byte[] buffer, Byte[] obuffer) {

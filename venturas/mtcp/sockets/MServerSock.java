@@ -15,7 +15,6 @@ public class MServerSock extends AbstractMSock {
 	private int privatePort;
 	private Socket otherServer;
 	private boolean hasClient;
-	private int counter = 0;
 	private ServerSocket ssServer;
 	private ServerSocket ssClient;
 
@@ -274,14 +273,6 @@ public class MServerSock extends AbstractMSock {
 						inByteMessages.put(p.getPayload());
 						this.latestState.addToBufferIn(p.getPayload());
 						Flag[] flags = {Flag.ACK};
-
-						if (counter == 50) {
-							log("Counter is 50!!!!");
-							try { Thread.sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
-						} else {
-							//   log("Counter is " + counter);
-						}
-						counter += 1;
 
 						oos.writeObject(new Packet(flags, null));
 						log("wrote ACK, btw timeout is " + socket.getSoTimeout());
