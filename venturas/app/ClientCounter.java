@@ -33,7 +33,7 @@ public class ClientCounter {
 					log("Awaaaaaaaaaaaaaaaaaake");
 				}
 			} catch (MTCPStreamMigratedException e) {
-				System.err.println("(((CLIENT)))STREAM MIGRATED EXCEPTION!!!!!!!");
+				e.printStackTrace();
 			}
 		}
 	}
