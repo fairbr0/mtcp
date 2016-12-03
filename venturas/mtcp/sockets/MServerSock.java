@@ -130,6 +130,7 @@ public class MServerSock extends AbstractMSock {
 			e.printStackTrace();
 		}
 
+		super.migrated.set(true);
 		reinit();
 		//close shit off properly!!!!
 

@@ -34,26 +34,31 @@ public class ServerCounter {
         MServerSock serverSocket = new MServerSock(Integer.parseInt(me[1]), Integer.parseInt(me[3]), otherServers);
 		serverSocket.accept();
 
-        while (!serverSocket.hasClient()) {
-            log("waiting on client");
-			Thread.sleep(1000);
-        }
-		State<Byte> state = serverSocket.importState();
+        while (true) {
+			while (!serverSocket.hasClient()) {
+            	log("waiting on client");
+				Thread.sleep(1000);
+        	}
+			State<Byte> state = serverSocket.importState();
 
-		log("Got past accept call (remember, is non blocking)");
-		MigratoryOutputStream qos = serverSocket.getOutputStream();
-		MigratoryInputStream qis = serverSocket.getInputStream();
+			log("Got past accept call (remember, is non blocking)");
+			MigratoryOutputStream qos = serverSocket.getOutputStream();
+			MigratoryInputStream qis = serverSocket.getInputStream();
 
-		log("Entering while...");
+			log("Entering while...");
 
-		while (true) {
-			log("Okay, I'm gonna read something");
-			byte[] b = qis.readBytes();
-			log("Got " + b[0]);
-			Thread.sleep(500);
-			if (b[0] % 3 == 0) {
-				state.setState(b[0]);
-
+			while (true) {
+				log("Okay, I'm gonna read something");
+				try {
+					byte[] b = qis.readBytes();
+					log("Got " + b[0]);
+					Thread.sleep(500);
+					if (b[0] % 3 == 0) {
+						state.setState(b[0]);
+					}
+				} catch (MTCPStreamMigratedException e) {
+					System.err.println("(((SEERVER)))STREAM MIGRATED EXCEPTION!!!!!!!");
+				}
 			}
 		}
 	}

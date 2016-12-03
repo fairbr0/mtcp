@@ -23,13 +23,17 @@ public class ClientCounter {
 		while (true) {
 			Thread.sleep(1000);
 			byte[] b = {(byte)i};
-			qos.writeBytes(b);
-			log("Write " + b[0] + ", increment and then loop");
-			i += 1;
-			if (i % 5 == 0) {
-				log("========SLEEPING NOW=======");
-				Thread.sleep(4000);
-				log("Awaaaaaaaaaaaaaaaaaake");
+			try {
+				qos.writeBytes(b);
+				log("Write " + b[0] + ", increment and then loop");
+				i += 1;
+				if (i % 5 == 0) {
+					log("========SLEEPING NOW=======");
+					Thread.sleep(4000);
+					log("Awaaaaaaaaaaaaaaaaaake");
+				}
+			} catch (MTCPStreamMigratedException e) {
+				System.err.println("(((CLIENT)))STREAM MIGRATED EXCEPTION!!!!!!!");
 			}
 		}
 	}

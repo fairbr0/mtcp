@@ -9,15 +9,15 @@ import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
 public abstract class AbstractMSock {
-	Socket socket;
-	MigratoryInputStream is;
-	MigratoryOutputStream os;
+	protected Socket socket;
+	private MigratoryInputStream is;
+	private MigratoryOutputStream os;
 	protected BlockingQueue<byte[]> inByteMessages;
 	protected BlockingQueue<byte[]> outByteMessages;
-	ObjectOutputStream oos;
-	ObjectInputStream ois;
+	protected ObjectOutputStream oos;
+	protected ObjectInputStream ois;
 	protected AtomicBoolean ackLock = new AtomicBoolean(false);
-	int timeout;
+	protected AtomicBoolean migrated = new AtomicBoolean(false);
 
 	public AbstractMSock() {
 		outByteMessages = new LinkedBlockingQueue<byte[]>();
@@ -32,9 +32,9 @@ public abstract class AbstractMSock {
 	protected void acceptClient(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		socket = s;
 		oos = new ObjectOutputStream(socket.getOutputStream());
-		os = new MigratoryOutputStream(outByteMessages);
+		os = new MigratoryOutputStream(outByteMessages, migrated);
 		ois = new ObjectInputStream(socket.getInputStream());
-		is = new MigratoryInputStream(inByteMessages);
+		is = new MigratoryInputStream(inByteMessages, migrated);
 
 		initialHandshake();
 		handleIncomingPacket();
@@ -71,8 +71,4 @@ public abstract class AbstractMSock {
 	}
 
 	protected abstract String getLabel();
-
-	public void setSoTimeout(int ms) {
-		this.timeout = ms;
-	}
 }
