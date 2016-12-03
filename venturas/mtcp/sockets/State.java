@@ -3,22 +3,22 @@ import java.util.LinkedList;
 import java.io.Serializable;
 
 public class State<T> implements Serializable {
-    private T state;
+    private T snapshot;
     private LinkedList<byte[]> bufferIn;
     private LinkedList<byte[]> bufferOut;
 
-    public State(T state) {
-        this.state = state;
+    public State(T snapshot) {
+        this.snapshot = snapshot;
         this.bufferIn = new LinkedList<byte[]>();
         this.bufferOut = new LinkedList<byte[]>();
     }
 
-    public void setState(T state) {
-        this.state = state;
+    public void setSnapshot(T snapshot) {
+        this.snapshot = snapshot;
     }
 
-    public T getState() {
-        return this.state;
+    public T getSnapshot() {
+        return this.snapshot;
     }
 
     public LinkedList<byte[]> getBufferIn() {
@@ -28,6 +28,10 @@ public class State<T> implements Serializable {
     public LinkedList<byte[]> getBufferOut() {
         return this.bufferOut;
     }
+
+	public boolean isEmpty() {
+		return (snapshot == null) && bufferIn.isEmpty() && bufferOut.isEmpty();
+	}
 
     public void clearBuffers() {
         this.bufferIn = new LinkedList<byte[]>();
@@ -43,6 +47,6 @@ public class State<T> implements Serializable {
     }
 
 	public String toString() {
-		return "SNAPSHOT(" + state + "):BUFFERIN:(" + bufferIn.toString() +"):BUFFEROUT:(" + bufferOut.toString() + ")";
+		return "SNAPSHOT(" + snapshot + "):BUFFERIN:(" + bufferIn.toString() +"):BUFFEROUT:(" + bufferOut.toString() + ")";
 	}
 }

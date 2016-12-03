@@ -1,28 +1,35 @@
 package venturas.mtcp.io;
 
+import venturas.mtcp.sockets.*;
+
 public class MigratoryObjectInputStream {
 
   public MigratoryInputStream bytes;
   private static int arrayLength = SerializationUtils.arrayLength;
 
-  public MigratoryObjectInputStream(MigratoryInputStream bytes) throws Exception {
+  public MigratoryObjectInputStream(MigratoryInputStream bytes) {
     this.bytes = bytes;
   }
 
-  public Object readObject() throws Exception{
+  public Object readObject() throws InterruptedException {
     ByteObject a = new ByteObject();
-    a.setValues(bytes.readBytes());
+	byte[] returnArray = null;
+	try {
+	    a.setValues(bytes.readBytes());
 
-    //total length to read in bytes
-    int length = ((a.length - 1) * this.arrayLength) + a.paddingSize; //+ a.paddingSize;
-    byte[] returnArray = new byte[length];
+	    //total length to read in bytes
+	    int length = ((a.size() - 1) * this.arrayLength) + a.paddingSize; //+ a.paddingSize;
+		returnArray = new byte[length];
 
-    for (int i = 1; i < a.length; i++) {
-        //arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
-        System.arraycopy(bytes.readBytes(), 0, returnArray, (i-1) * this.arrayLength, this.arrayLength);
-    }
+	    for (int i = 1; i < a.size(); i++) {
+	        //arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+	        System.arraycopy(bytes.readBytes(), 0, returnArray, (i-1) * this.arrayLength, this.arrayLength);
+	    }
 
-    System.arraycopy(bytes.readBytes(), 0, returnArray, (a.length-1) * this.arrayLength, a.paddingSize);
+	    System.arraycopy(bytes.readBytes(), 0, returnArray, (a.size()-1) * this.arrayLength, a.paddingSize);
+	} catch (MTCPStreamMigratedException e) {
+		e.printStackTrace();
+	}
 
     return SerializationUtils.fromByteArray(returnArray);
   }

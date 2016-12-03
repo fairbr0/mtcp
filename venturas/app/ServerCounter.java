@@ -45,8 +45,8 @@ public class ServerCounter {
 				State<Integer> state = serverSocket.importState();
 				System.err.println("re constructed state----------");
 				Integer reconstructedState = null;
-				if (state.getState() != null) {
-					reconstructedState = state.getState();
+				if (state.getSnapshot() != null) {
+					reconstructedState = state.getSnapshot();
 					Iterator<byte[]> it = state.getBufferIn().iterator();
 					while (it.hasNext()) {
 						byte[] next = it.next();
