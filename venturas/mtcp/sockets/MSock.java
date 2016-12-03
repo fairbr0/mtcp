@@ -138,7 +138,6 @@ public class MSock extends AbstractMSock {
 		super.ois = s2ois;
 		this.s1Address = s2Mapping.getPublicAddress();
 		this.s1Port = s2Mapping.getPublicPort();
-		super.migrated.set(true);
 		ackLock.set(false);
 		log("Socket changed now. Lock state: " + ackLock.get());
 	}
