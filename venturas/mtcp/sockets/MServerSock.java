@@ -85,9 +85,9 @@ public class MServerSock extends AbstractMSock {
         this.latestState = state;
     }
 
-    public State importState() {
-        while (this.latestState == null) {
-            //block
+    public State importState() throws MTCPStateException {
+        if (this.latestState == null) {
+            throw new MTCPStateException("Latest state snapshot is null");
         }
         return this.latestState;
     }

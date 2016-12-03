@@ -6,7 +6,7 @@ import java.util.*;
 import venturas.mtcp.sockets.*;
 import venturas.mtcp.io.*;
 
-public class TestSerApp {
+public class ServerCounter {
 
 	//java Server {me} {everyone}
 	//e.g. Two parties:
@@ -38,6 +38,7 @@ public class TestSerApp {
             log("waiting on client");
 			Thread.sleep(1000);
         }
+		State<Byte> state = serverSocket.importState();
 
 		log("Got past accept call (remember, is non blocking)");
 		MigratoryOutputStream qos = serverSocket.getOutputStream();
@@ -45,18 +46,15 @@ public class TestSerApp {
 
 		log("Entering while...");
 
-
 		while (true) {
 			log("Okay, I'm gonna read something");
 			byte[] b = qis.readBytes();
 			log("Got " + b[0]);
 			Thread.sleep(500);
-			// if (b[0] == 5) {
-			// 	log("Forcing MEGA-long sleep on i == 5");
-			// 	Thread.sleep(1000);
-			// }
+			if (b[0] % 3 == 0) {
+				state.setState(b[0]);
 
-			// qos.writeBytes(b);
+			}
 		}
 	}
 

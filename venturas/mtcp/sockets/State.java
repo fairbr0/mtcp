@@ -42,4 +42,7 @@ public class State<T> implements Serializable {
         this.bufferOut.add(buffer);
     }
 
+	public String toString() {
+		return "SNAPSHOT(" + state + "):BUFFERIN:(" + bufferIn.toString() +"):BUFFEROUT:(" + bufferOut.toString() + ")";
+	}
 }

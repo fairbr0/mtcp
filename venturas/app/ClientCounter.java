@@ -5,7 +5,7 @@ import venturas.mtcp.sockets.*;
 import venturas.mtcp.io.*;
 import java.io.*;
 
-public class TestCliApp {
+public class ClientCounter {
 	public static void main(String[] args) throws Exception {
 
 		if (args.length != 2) {
