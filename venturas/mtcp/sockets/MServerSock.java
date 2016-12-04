@@ -28,6 +28,13 @@ public class MServerSock extends AbstractMSock {
 
 	private void reinit() throws IOException {
 		init(this.publicPort, this.privatePort, this.serverList);
+		try {
+			ois.close(); //#thisisnew
+			oos.close(); //#thisisnew
+			socket.close();
+		} catch (EOFException e) {
+   			//logError("CAUGHT AN EOFException on socket close");
+   		}
 		accept();
 		migrated.set(false);
 	}
@@ -93,26 +100,26 @@ public class MServerSock extends AbstractMSock {
     }
 
 	private void serverToServerHandshake() throws IOException, ClassNotFoundException, MTCPMigrationException, MTCPHandshakeException {
-		log("serverToServerHandshake initiated");
+		//log("serverToServerHandshake initiated");
 		ObjectOutputStream soos = new ObjectOutputStream(otherServer.getOutputStream());
         ObjectInputStream sois = new ObjectInputStream(otherServer.getInputStream());
-		log("created streams, will now try to read a packet. Will hope it is req state");
+		//log("created streams, will now try to read a packet. Will hope it is req state");
 		Flag[] reqState = ((InternalPacket)sois.readObject()).getFlags();
-		log("read a packet, hoping it is REQ_STATE, let's check bro");
+		//log("read a packet, hoping it is REQ_STATE, let's check bro");
 		if (reqState.length != 1) {
 			throw new MTCPMigrationException("Did not get length 1 flags when expecting REQ_STATE");
 		}
 		if (!containsFlag(Flag.REQ_STATE, reqState)) {
 			throw new MTCPMigrationException("Did not get REQ_STATE");
 		}
-		log("YAYAYAYAYAY it was a REQ_STATE");
+		//log("YAYAYAYAYAY it was a REQ_STATE");
 		Flag[] rspState = {Flag.RSP_STATE};
 		InternalPacket<State> state = new InternalPacket<State>(rspState, latestState);
 		soos.writeObject(state);
-		log("Wrote an RSP_STATE, let's look at another packet which i hope is an ACK");
+		//log("Wrote an RSP_STATE, let's look at another packet which i hope is an ACK");
 
 		Flag[] ack = ((InternalPacket)sois.readObject()).getFlags();
-		log("just read something, gonna check if it is an ACK yo");
+		//log("just read something, gonna check if it is an ACK yo");
 		if (ack.length != 1) {
 			throw new MTCPMigrationException("Did not get length 1 flags when expecting ACK");
 		}
@@ -120,9 +127,11 @@ public class MServerSock extends AbstractMSock {
 			throw new MTCPMigrationException("Did not get ACK");
 		}
 
-		log("yayayyay got an ACK yay");
+		//log("yayayyay got an ACK yay");
 
 		try {
+			sois.close(); //#thisisnew
+			soos.close(); //#thisisnew
 			this.otherServer.close();
 			// this.acceptServer();
 			// this.handleIncomingPacket();
@@ -150,22 +159,24 @@ public class MServerSock extends AbstractMSock {
         Flag[] flags = {Flag.REQ_STATE};
         InternalPacket p = new InternalPacket(flags);
         soos.writeObject(p);
-		log("Sent REQ_STATE packet");
+		//log("Sent REQ_STATE packet");
 
         InternalPacket<State> response = (InternalPacket<State>) sois.readObject();
-		log("Got response");
+		//log("Got response");
         if (!containsFlag(Flag.RSP_STATE, response.getFlags())) {
 			System.out.println(java.util.Arrays.toString(flags));
 			throw new MTCPHandshakeException("Not got RSP_STATE flag");
 		}
-		log("Got RSP_STATE");
+		//log("Got RSP_STATE");
         //got the state back.
         this.latestState = (State) response.getPayload();
         Flag[] serverResponseFlags = {Flag.ACK};
         soos.writeObject(new InternalPacket(serverResponseFlags));
-		log("Sent ACK response");
+		//log("Sent ACK response");
         try {
-			log("Closed connection to other server");
+			//log("Closed connection to other server");
+			soos.close();
+			sois.close();
             s.close();
         } catch (Exception e) {
             // catch the errors thrown by streams;
@@ -173,18 +184,18 @@ public class MServerSock extends AbstractMSock {
         }
 
         //tell the client that the migration was a success
-		log("Sending ACK, MIG_READY to client");
+		//log("Sending ACK, MIG_READY to client");
         Flag[] clientResponseFlags = {Flag.ACK, Flag.MIG_READY};
         this.oos.writeObject(new InternalPacket(clientResponseFlags));
 		ackLock.set(true);
-		log("Handshake complete");
+		//log("Handshake complete");
 
     }
 
     public Socket getSocketFromMapping(InetAddress address, int port) throws IOException {
         int mappedPort = 0;
         InetAddress mappedAddress = null;
-		System.err.println("[[[[[[[" + serverList.toString() + "]]]]]]]");
+		// System.err.println("[[[[[[[" + serverList.toString() + "]]]]]]]");
         Iterator<AddressMapping> it = serverList.iterator();
         while (it.hasNext()) {
             AddressMapping mapping = it.next();
@@ -193,20 +204,20 @@ public class MServerSock extends AbstractMSock {
                 mappedPort = mapping.getPrivatePort();
                 break;
             } else {
-				System.err.println("+++++++++++++++" + address.toString() + ",,,,," + port);
+				// System.err.println("+++++++++++++++" + address.toString() + ",,,,," + port);
 			}
         }
-		log("Found socket mapping");
+		//log("Found socket mapping");
         Socket server = new Socket(mappedAddress, mappedPort);
-		log("Got connection to other server");
+		//log("Got connection to other server");
         return server;
     }
 
   	protected void initialHandshake() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		ackLock.set(true);
-		log("Beginning Handshake");
+		//log("Beginning Handshake");
 		InternalPacket p = (InternalPacket)ois.readObject();
-		log("Got Packet");
+		//log("Got Packet");
 		if (p.getFlags().length > 2) {
 			throw new MTCPHandshakeException("got wrong no. of flags on expected SYN");
 		}
@@ -214,19 +225,19 @@ public class MServerSock extends AbstractMSock {
 			throw new MTCPHandshakeException("did not get SYN, instead got:" + Arrays.toString(p.getFlags()));
 		}
 		if (containsFlag(Flag.MIG, p.getFlags())) {
-			log("Got SYN, MIG. Beginning server migration.");
+			//log("Got SYN, MIG. Beginning server migration.");
 			AddressMapping s1 = (AddressMapping)p.getPayload();
 			clientMigrationRequest(s1.getPublicAddress(), s1.getPublicPort());
-			log("Server ready");
+			//log("Server ready");
 			ackLock.set(false);
 			return;
 		}
-		log("Got SYN flag");
+		//log("Got SYN flag");
 		Flag[] synAck = {Flag.SYN, Flag.ACK};
 		oos.writeObject(new InternalPacket(synAck, getClientMapping()));
 		oos.flush();
-		log("Send SYN, ACK to client");
-		log("Waiting for ACK");
+		//log("Send SYN, ACK to client");
+		//log("Waiting for ACK");
 		Flag[] ackResponse = ((InternalPacket)ois.readObject()).getFlags();
 		if (ackResponse.length != 1) {
 			throw new MTCPHandshakeException("got wrong no. of flags on expected ACK");
@@ -235,10 +246,10 @@ public class MServerSock extends AbstractMSock {
 			throw new MTCPHandshakeException("did not get ACK");
 		}
 		//got ack, yay!
-		log("Got ACK");
-		log("Handshake complete");
+		//log("Got ACK");
+		//log("Handshake complete");
 		ackLock.set(false);
-		log("Socket Ready");
+		//log("Socket Ready");
   	}
 
 	private List<AddressMapping> getClientMapping() {
@@ -260,15 +271,18 @@ public class MServerSock extends AbstractMSock {
 		Thread t = new Thread(() -> {
 			try {
 				while(true) {
-					System.err.println("£££££££££££££££££ waiting on a read yo");
 					Packet p = null;
 					try {
 						p = (Packet)ois.readObject();
 					} catch (EOFException e) {
-						logError("KILLLING MYSELF for reincarnation");
+						//logError("KILLLING MYSELF for reincarnation");
+						logError("EOFException, migration??????????");
+						break;
+					} catch (SocketException e) {
+						logError("SocketException, migration???????");
 						break;
 					}
-					System.err.println("&&&&&&&&&&&&&&&& did that read!");
+					// System.err.println("&&&&&&&&&&&&&&&& did that read!");
 					Flag[] f = p.getFlags();
 					if (containsFlag(Flag.MESSAGE, f)) {
 						inByteMessages.put(p.getPayload());
@@ -276,9 +290,9 @@ public class MServerSock extends AbstractMSock {
 						Flag[] flags = {Flag.ACK};
 
 						oos.writeObject(new Packet(flags, null));
-						log("wrote ACK, btw timeout is " + socket.getSoTimeout());
+						//log("wrote ACK, btw timeout is " + socket.getSoTimeout());
 					} else if (containsFlag(Flag.ACK, f)) {
-						log("got ACK packet");
+						//log("got ACK packet");
 						ackLock.set(false);
 
 					}
@@ -286,11 +300,19 @@ public class MServerSock extends AbstractMSock {
 				System.err.println("DEEEEEADDD");
 
 			} catch (SocketTimeoutException e) {
-				logError("Socket timed out, but that's probably okay");
+				//logError("Socket timed out, but that's probably okay");
 				e.printStackTrace();
-			} catch (Exception e) {
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+			// catch (Exception e) {
+			// 	// e.printStackTrace();
+			// 	System.err.println(":(");
+			// }
 		});
 		t.start();
 	}
@@ -302,13 +324,15 @@ public class MServerSock extends AbstractMSock {
           while(true) {
             while (ackLock.get()) {
               //block
+			  Thread.sleep(0);
             }
             ackLock.set(true);
             Flag[] flags = {Flag.MESSAGE};
             byte[] outgoingBytes = outByteMessages.take();
             oos.writeObject(new Packet(flags, outgoingBytes));
+			oos.flush();
 
-            this.latestState.addToBufferOut(outgoingBytes);
+			this.latestState.addToBufferOut(outgoingBytes);
           }
         } catch (Exception e) {
           e.printStackTrace();

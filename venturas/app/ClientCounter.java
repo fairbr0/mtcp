@@ -21,16 +21,12 @@ public class ClientCounter {
 		MigratoryInputStream qis = msocket.getInputStream();
 		int i = 0;
 		while (true) {
-			Thread.sleep(1000);
 			byte[] b = {(byte)i};
 			try {
 				qos.writeBytes(b);
-				log("Write " + b[0] + ", increment and then loop");
 				i += 1;
-				if (i % 5 == 0) {
-					log("========SLEEPING NOW=======");
-					Thread.sleep(4000);
-					log("Awaaaaaaaaaaaaaaaaaake");
+				if (i % 10 == 0) {
+					Thread.sleep(MSock.TIMEOUT * 2);
 				}
 			} catch (MTCPStreamMigratedException e) {
 				e.printStackTrace();

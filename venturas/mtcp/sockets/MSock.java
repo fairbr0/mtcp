@@ -14,7 +14,7 @@ public class MSock extends AbstractMSock {
 	private List<AddressMapping> otherServers;
 	private InetAddress s1Address;
 	private int s1Port;
-	private static final int TIMEOUT = 100;
+	public static final int TIMEOUT = 500;
 
 	public MSock(InetAddress address, int port) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		super(new Socket(address, port));
@@ -30,9 +30,9 @@ public class MSock extends AbstractMSock {
 		Flag[] syn = {Flag.SYN};
 		oos.writeObject(new InternalPacket(syn, null));
 		oos.flush();
-		log("SYN sent");
+		//log("SYN sent");
 		InternalPacket<List<AddressMapping>> response = (InternalPacket<List<AddressMapping>>)ois.readObject();
-		log("Got response. SYN, ACK Expected:");
+		//log("Got response. SYN, ACK Expected:");
 		Flag[] responseFlags = response.getFlags();
 		if (containsFlag(Flag.SYN, responseFlags) && containsFlag(Flag.ACK, responseFlags)) {
 			if (responseFlags.length != 2) {
@@ -41,15 +41,15 @@ public class MSock extends AbstractMSock {
 		} else {
 			throw new MTCPHandshakeException("Did not get SYN,ACK");
 		}
-		log("Got SYN, ACK");
+		//log("Got SYN, ACK");
 		this.otherServers = response.getPayload();
 		Flag[] ack = {Flag.ACK};
 		oos.writeObject(new InternalPacket(ack, null));
 		oos.flush();
-		log("Sent ACK");
-		log("Handshake complete");
+		//log("Sent ACK");
+		//log("Handshake complete");
 		ackLock.set(false);
-		log("Socket Ready.");
+		//log("Socket Ready.");
 	}
 
 	protected String getLabel() {
@@ -59,7 +59,7 @@ public class MSock extends AbstractMSock {
 	/* Pre: C is connected to S1, but connected has already degraded
 	 * Post: C is connected to S2 */
 	private void migrate() throws IOException, ClassNotFoundException, MTCPMigrationException {
-		log("MIGRATION CALLED");
+		//log("MIGRATION CALLED");
 		ackLock.set(true);
 		//Pick S2 from list in FIFO strategy
 		if (otherServers == null || otherServers.isEmpty() || otherServers.size() == 0) {
@@ -80,13 +80,13 @@ public class MSock extends AbstractMSock {
 			}
 		}
 
-		log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2Mapping.toString());
+		//log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2Mapping.toString());
 
 		Socket s2Socket = new Socket(s2Mapping.getPublicAddress(), s2Mapping.getPublicPort());
-		log("Created s2Socket");
+		//log("Created s2Socket");
 		ObjectOutputStream s2oos = new ObjectOutputStream(s2Socket.getOutputStream());
 		ObjectInputStream s2ois = new ObjectInputStream(s2Socket.getInputStream());
-		log("we reated the s2 streams");
+		//log("we reated the s2 streams");
 
 		//write SYN MIG to S2
 		Flag[] synMig = {Flag.SYN, Flag.MIG};
@@ -95,43 +95,45 @@ public class MSock extends AbstractMSock {
 		AddressMapping apt = new AddressMapping(currentAdd, currentPort);
 		System.err.println("I am telling my new server than the current server I wanna migrate AWAY from is " + apt.toString());
 		s2oos.writeObject(new InternalPacket(synMig, new AddressMapping(s1Address, s1Port)));
-		log("wrote SYN MIG");
+		//log("wrote SYN MIG");
 
 		// Wait for expected ACK, MIG
-		log("now gonna read and hope it is an ACK MIG");
+		//log("now gonna read and hope it is an ACK MIG");
 		Flag[] ackMig = ((InternalPacket)s2ois.readObject()).getFlags();
-		log("got a packet, now gonna check if it was ACK MIG");
+		//log("got a packet, now gonna check if it was ACK MIG");
 		if (ackMig.length != 2) {
 			throw new MTCPMigrationException("Got array of wrong length when expecting ACK,MIG (should be 2)");
 		}
 		if (!containsFlag(Flag.ACK, ackMig) || !containsFlag(Flag.MIG, ackMig)) {
 			throw new MTCPMigrationException("Did not get ACK,MIG despite expecting only that");
 		}
-		log("got an ACK MIG!");
+		//log("got an ACK MIG!");
 		/* got ACK,MIG we now know that S2 is available to assume server
 		 * responsibilities for C, and will have a chat with S1 to sort this out */
 
 		//Must now wait until S2 is ready for migration
-		log("now reading, hopefully an ACK MIG_READY");
+		//log("now reading, hopefully an ACK MIG_READY");
 		Flag[] ackReady = ((InternalPacket)s2ois.readObject()).getFlags();
-		log("got reply, let's check if it is ACK");
+		//log("got reply, let's check if it is ACK");
 		if (ackReady.length != 2) {
 			throw new MTCPMigrationException("Got array of wrong length when expecting ACK,MIG_READY (should be 2)");
 		}
 		if (!containsFlag(Flag.ACK, ackReady) || !containsFlag(Flag.MIG_READY, ackReady)) {
 			throw new MTCPMigrationException("Did not get ACK,MIG_READY despite expecting only that");
 		}
-		log("yay got an ACK");
+		//log("yay got an ACK");
 
 		/* got ACK,MIG_READY we now know that S2 is ready to replace S1 in the
 		 * communication */
-		log("Changing socket over now");
-		log("s2Socket port number = " + s2Socket.getPort());
+		//log("Changing socket over now");
+		//log("s2Socket port number = " + s2Socket.getPort());
 
 		try {
+			super.ois.close();
+			super.oos.close(); //#thisisnew
 			super.socket.close();
 		} catch (EOFException e) {
-			logError("CAUGHT AN EOFException on socket close");
+			//logError("CAUGHT AN EOFException on socket close");
 		}
 		super.socket = s2Socket;
 		super.socket.setSoTimeout(TIMEOUT);
@@ -140,7 +142,7 @@ public class MSock extends AbstractMSock {
 		this.s1Address = s2Mapping.getPublicAddress();
 		this.s1Port = s2Mapping.getPublicPort();
 		ackLock.set(false);
-		log("Socket changed now. Lock state: " + ackLock.get());
+		//log("Socket changed now. Lock state: " + ackLock.get());
 	}
 
 	protected void handleOutgoingPacket() {
@@ -148,14 +150,15 @@ public class MSock extends AbstractMSock {
 			try {
 				while(true) {
 					while (ackLock.get()) {
+						Thread.sleep(0);
 						//block
 					}
 					ackLock.set(true);
 					Flag[] flags = {Flag.MESSAGE};
-					log("soTimeOut outgoing listener: " + socket.getSoTimeout());
+					//log("soTimeOut outgoing listener: " + socket.getSoTimeout());
 					byte[] message = outByteMessages.take();
 					oos.writeObject(new Packet(flags, message));
-					log("Wrote Packet");
+					//log("Wrote Packet");
 				}
 			} catch (SocketTimeoutException e) {
 				e.printStackTrace();
@@ -170,23 +173,88 @@ public class MSock extends AbstractMSock {
 	protected void handleIncomingPacket() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		(new Thread(() -> {
 			while(true) {
+				//log("listening for packet");
 				try {
-					//listening for a packet
-					Packet p = (Packet)ois.readObject();
+					//log("soTimeOut incomingListener: " + socket.getSoTimeout());
+					Object o = null;
+					Packet p = null;
+					try {
+						o = ois.readObject();
+					} catch (StreamCorruptedException e) {
+						e.printStackTrace();
+						System.err.println("-----");
+						if (o == null) {
+							System.err.println("o: null");
+						} else {
+							System.err.println("o: " + o.toString());
+						}
+						System.err.println("ois:" + ois.toString());
+						//System.exit(1);
+						throw new SocketTimeoutException();
+					} catch (ClassNotFoundException e) {
+						e.printStackTrace();
+						System.err.println("-----");
+						if (o == null) {
+							System.err.println("o: null");
+						} else {
+							System.err.println("o: " + o.toString());
+						}
+						System.err.println("-----");
+						throw new SocketTimeoutException();
+					} catch (ClassCastException e) {
+						e.printStackTrace();
+						System.err.println("-----");
+						if (o == null) {
+							System.err.println("o: null");
+						} else {
+							System.err.println("o: " + o.toString());
+						}
+						System.err.println("-----");
+						throw new SocketTimeoutException();
+					} catch (OptionalDataException e) {
+						e.printStackTrace();
+						System.err.println("-----");
+						if (o == null) {
+							System.err.println("o: null");
+						} else {
+							System.err.println("o: " + o.toString());
+						}
+						System.err.println("-----");
+						throw new SocketTimeoutException();
+					}
+					try {
+						p = (Packet)o;
+					} catch (Exception e) {
+						e.printStackTrace();
+						System.err.println("-----");
+						if (p == null) {
+							System.err.println("p: null");
+						} else {
+							System.err.println("p: " + p.toString());
+						}
+						System.err.println("-----");
+						System.exit(1);
+					}
+
 					Flag[] f = p.getFlags();
 					if (containsFlag(Flag.MESSAGE, f)) {
+						//log("Got MESSAGE packet");
 						inByteMessages.put(p.getPayload());
-						//Write an ACK
+						//log("Wrote ACK");
 						Flag[] flags = {Flag.ACK};
 						oos.writeObject(new Packet(flags, null));
 					} else if (containsFlag(Flag.ACK, f)) {
 						ackLock.set(false);
-						//Received an ACK, so unlock the ACK LOCK!
+						//log("ACK");
+
+
 					}
 				} catch (SocketTimeoutException e) {
-					log("======Client side timeout, now forcing migration=====");
+					//logError("======Client side timeout, now forcing migration=====");
 					try {
+						//log("lock state: " + ackLock.get());
 						migrate();
+						//log("We've just returned from the migrate");
 					} catch (MTCPMigrationException e1) {
 						e1.printStackTrace();
 					} catch (Exception e1) {
@@ -194,8 +262,8 @@ public class MSock extends AbstractMSock {
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
-				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
+				//please bring back later: } catch (ClassNotFoundException e) {
+				// 	e.printStackTrace();
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

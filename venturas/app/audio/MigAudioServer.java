@@ -121,7 +121,7 @@ public class MigAudioServer {
 				if (forceMigration == 1000) {
 					forceMigration = 0;
 					System.err.println("OOOOOHHHH FOOOOK ME, WE'RE GONNA SLEEP!");
-					Thread.sleep(200);
+					Thread.sleep(2 * MSock.TIMEOUT);
 				}
 			}
 		}

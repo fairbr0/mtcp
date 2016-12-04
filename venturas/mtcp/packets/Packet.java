@@ -1,6 +1,7 @@
 package venturas.mtcp.packets;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 public class Packet implements Serializable {
 
@@ -31,5 +32,11 @@ public class Packet implements Serializable {
 
 	public byte[] getPayload() {
 		return this.payload;
+	}
+
+	public String toString() {
+		String result = "FLAGS:" + Arrays.toString(flags) + '\n';
+		result += "PAYLOAD:" + Arrays.toString(payload);
+		return result;
 	}
 }

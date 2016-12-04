@@ -40,10 +40,9 @@ public class ServerCounter {
 			try {
 				while (!serverSocket.hasClient()) {
 	            	log("waiting on client");
-					Thread.sleep(1000);
+					Thread.sleep(400);
 	        	}
 				State<Integer> state = serverSocket.importState();
-				System.err.println("re constructed state----------");
 				Integer reconstructedState = null;
 				if (state.getSnapshot() != null) {
 					reconstructedState = state.getSnapshot();
@@ -59,21 +58,20 @@ public class ServerCounter {
 					sum = 0;
 				}
 				System.err.println(sum);
-				System.err.println("----------");
-
-				log("Got past accept call (remember, is non blocking)");
 				MigratoryOutputStream qos = serverSocket.getOutputStream();
 				MigratoryInputStream qis = serverSocket.getInputStream();
 
-				log("Entering while...");
-
 				while (true) {
-					log("Okay, I'm gonna read something");
 
 					byte[] b = qis.readBytes();
 					log("Got " + b[0]);
 					sum += (int)b[0];
-					Thread.sleep(500);
+					boolean bool = (sum == (int)(0.5 * b[0] * (b[0] + 1)));
+					if (bool) {
+						log(""+bool);
+					} else {
+						log("FALSE; " + b[0]);
+					}
 					if (b[0] % 3 == 0) {
 						serverSocket.exportState(new State<Integer>(sum));
 					}

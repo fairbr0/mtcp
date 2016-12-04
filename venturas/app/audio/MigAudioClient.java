@@ -62,6 +62,7 @@ public class MigAudioClient {
 
         System.out.println("Waiting for buffer to fill");
         while (this.byteBuffer.size() < 100) {
+			Thread.sleep(0);
             //block
         }
         System.out.println("Beginning to play");
@@ -71,6 +72,7 @@ public class MigAudioClient {
             	line.write(this.byteBuffer.take(), 0, 1024);
         	}
 			while (this.byteBuffer.size() < 100) {
+				Thread.sleep(0);
 	            //block
 	        }
 		}
