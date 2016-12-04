@@ -1,2 +1,3 @@
-java venturas/app/audio/MigAudioClient localhost 9031
+port=9031
+java venturas/app/audio/MigAudioClient localhost:$port
 

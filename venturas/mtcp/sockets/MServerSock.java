@@ -29,6 +29,7 @@ public class MServerSock extends AbstractMSock {
 	private void reinit() throws IOException {
 		init(this.publicPort, this.privatePort, this.serverList);
 		accept();
+		migrated.set(false);
 	}
 
 	private void init(int publicPort, int privatePort, List<AddressMapping> serverList) throws IOException {

@@ -15,6 +15,7 @@ public class MigratoryObjectInputStream {
     ByteObject a = new ByteObject();
 	byte[] returnArray = null;
 	try {
+		System.err.println("is a null? ");
 	    a.setValues(bytes.readBytes());
 
 	    //total length to read in bytes

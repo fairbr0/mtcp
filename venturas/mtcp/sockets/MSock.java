@@ -14,12 +14,13 @@ public class MSock extends AbstractMSock {
 	private List<AddressMapping> otherServers;
 	private InetAddress s1Address;
 	private int s1Port;
+	private static final int TIMEOUT = 100;
 
 	public MSock(InetAddress address, int port) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		super(new Socket(address, port));
 		this.s1Address = address;
 		this.s1Port = port;
-		socket.setSoTimeout(3000);
+		socket.setSoTimeout(TIMEOUT);
 
 		//initialHandshake will be called by super, amongst others
 	}
@@ -133,7 +134,7 @@ public class MSock extends AbstractMSock {
 			logError("CAUGHT AN EOFException on socket close");
 		}
 		super.socket = s2Socket;
-		super.socket.setSoTimeout(3000);
+		super.socket.setSoTimeout(TIMEOUT);
 		super.oos = s2oos;
 		super.ois = s2ois;
 		this.s1Address = s2Mapping.getPublicAddress();
@@ -169,29 +170,23 @@ public class MSock extends AbstractMSock {
 	protected void handleIncomingPacket() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		(new Thread(() -> {
 			while(true) {
-				log("listening for packet");
 				try {
-					log("soTimeOut incomingListener: " + socket.getSoTimeout());
+					//listening for a packet
 					Packet p = (Packet)ois.readObject();
 					Flag[] f = p.getFlags();
 					if (containsFlag(Flag.MESSAGE, f)) {
-						log("Got MESSAGE packet");
 						inByteMessages.put(p.getPayload());
-						log("Wrote ACK");
+						//Write an ACK
 						Flag[] flags = {Flag.ACK};
 						oos.writeObject(new Packet(flags, null));
 					} else if (containsFlag(Flag.ACK, f)) {
 						ackLock.set(false);
-						log("ACK");
-
-
+						//Received an ACK, so unlock the ACK LOCK!
 					}
 				} catch (SocketTimeoutException e) {
-					logError("======Client side timeout, now forcing migration=====");
+					log("======Client side timeout, now forcing migration=====");
 					try {
-						log("lock state: " + ackLock.get());
 						migrate();
-						log("We've just returned from the migrate");
 					} catch (MTCPMigrationException e1) {
 						e1.printStackTrace();
 					} catch (Exception e1) {

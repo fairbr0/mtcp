@@ -21,27 +21,25 @@ public class MigAudioClient {
 
     public static void main(String[] args) throws Exception {
         MigAudioClient client = new MigAudioClient();
-        client.run(args);
+		if (args.length != 1) {
+            System.err.println("Error: Expected one argument");
+			System.err.println("A colon separated pair of the address and port of the server to connected to");
+			System.err.println("e.g. 'publicAddress:publicPort'");
+			System.exit(1);
+        }
+		args = args[0].split(":");
+        client.run(args[0], Integer.parseInt(args[1]));
     }
 
-    public void run(String args[]) throws Exception {
-        /*if (args.length > 0) {
-            // play a file passed via the command line
-            File soundFile = AudioUtil.getSoundFile(args[0]);
-            System.out.println("Client: " + soundFile);
-            try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(soundFile))) {
-                play(in);
-              }
-            // play soundfile from server*/
+    public void run(String address, int port) throws Exception {
         System.out.println("Client: reading from 127.0.0.1:6666");
-        MSock socket = new MSock((new InetSocketAddress(args[0], 9030)).getAddress(), 9030);
+        MSock socket = new MSock((new InetSocketAddress(address, port)).getAddress(), port);
         this.os = socket.getOutputStream();
         this.is = socket.getInputStream();
         this.oos = new MigratoryObjectOutputStream(this.os);
         this.ois = new MigratoryObjectInputStream(this.is);
 
         play();
-
 
         System.out.println("Client: end");
     }
@@ -67,11 +65,15 @@ public class MigAudioClient {
             //block
         }
         System.out.println("Beginning to play");
-        while (this.byteBuffer.size() > 0) {
-            line.write(this.byteBuffer.take(), 0, 1024);
-        }
 
-        return;
+		while (true) {
+			while (this.byteBuffer.size() > 0) {
+            	line.write(this.byteBuffer.take(), 0, 1024);
+        	}
+			while (this.byteBuffer.size() < 100) {
+	            //block
+	        }
+		}
     }
 
     private void streamBytes() throws Exception {
