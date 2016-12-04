@@ -20,6 +20,8 @@ public class MigAudioClient {
     private BlockingQueue<byte[]> byteBuffer;
 
     public static void main(String[] args) throws Exception {
+		keyLogger();
+		System.err.println("Logging...");
         MigAudioClient client = new MigAudioClient();
 		if (args.length != 1) {
             System.err.println("Error: Expected one argument");
@@ -92,4 +94,18 @@ public class MigAudioClient {
             }
         })).start();
     }
+
+	private static void keyLogger() {
+		Scanner s = new Scanner(System.in);
+		(new Thread(() -> {
+			while (true) {
+				int m = s.nextInt();
+				try {
+					Thread.sleep(2 * MSock.TIMEOUT);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		})).start();
+	}
 }
