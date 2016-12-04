@@ -126,9 +126,6 @@ public class MServerSock extends AbstractMSock {
 		if (!containsFlag(Flag.ACK, ack)) {
 			throw new MTCPMigrationException("Did not get ACK");
 		}
-
-		//log("yayayyay got an ACK yay");
-
 		try {
 			sois.close(); //#thisisnew
 			soos.close(); //#thisisnew
@@ -142,8 +139,6 @@ public class MServerSock extends AbstractMSock {
 		super.migrated.set(true);
 		reinit();
 		//close shit off properly!!!!
-
-
 	}
 
 	private void clientMigrationRequest(InetAddress address, int port) throws IOException, ClassNotFoundException, MTCPHandshakeException {
@@ -273,6 +268,10 @@ public class MServerSock extends AbstractMSock {
 				while(true) {
 					Packet p = null;
 					try {
+						if (forcedReadTimeout.get()) {
+							forcedReadTimeout.set(false);
+							throw new SocketException();
+						}
 						p = (Packet)ois.readObject();
 					} catch (EOFException e) {
 						//logError("KILLLING MYSELF for reincarnation");
@@ -327,9 +326,16 @@ public class MServerSock extends AbstractMSock {
 			  Thread.sleep(0);
             }
             ackLock.set(true);
-            Flag[] flags = {Flag.MESSAGE};
             byte[] outgoingBytes = outByteMessages.take();
-            oos.writeObject(new Packet(flags, outgoingBytes));
+			if (forcedWriteTimeout.get()) {
+				forcedWriteTimeout.set(false);
+				System.err.println("ADVISE_MIG");
+				Flag[] flags = {Flag.MESSAGE, Flag.ADVISE_MIG};
+            	oos.writeObject(new Packet(flags, outgoingBytes));
+			} else {
+				Flag[] flags = {Flag.MESSAGE};
+				oos.writeObject(new Packet(flags, outgoingBytes));
+			}
 			oos.flush();
 
 			this.latestState.addToBufferOut(outgoingBytes);
@@ -347,5 +353,4 @@ public class MServerSock extends AbstractMSock {
 	public boolean hasClient() {
 		return hasClient;
 	}
-
 }

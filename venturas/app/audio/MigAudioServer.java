@@ -45,7 +45,7 @@ public class MigAudioServer {
 			AddressMapping apt = new AddressMapping(addrPort[0], Integer.parseInt(addrPort[1]), addrPort[2], Integer.parseInt(addrPort[3]));
 			otherServers.add(apt);
 		}
-        MServerSock client = new MServerSock(Integer.parseInt(me[1]), Integer.parseInt(me[3]), otherServers);
+        client = new MServerSock(Integer.parseInt(me[1]), Integer.parseInt(me[3]), otherServers);
         client.accept(); //accept both a client and a server (for later potential migration)
 		//ABOVE DOES NOT BLOCK
 
@@ -95,7 +95,7 @@ public class MigAudioServer {
 			fileStream.seek(offset);
 
 			int forceExportState = 0;
-			int forceMigration = 0;
+			listenForBradburyForcedTimeout();
 			while (client.hasClient() && count != -1) { //TODO what if count becomes -1 ??????
 				//DO THE WRITE
 				byte[] bytesInFromFile = new byte[1024];
@@ -112,16 +112,10 @@ public class MigAudioServer {
 				}
 				forceExportState += 1;
 				offset += SerializationUtils.arrayLength;
-				if (forceExportState == 250) {
+				if (forceExportState == 100) {
 					//We export state after every 250 bytes
 					forceExportState = 0;
 					client.exportState(new State<Long>(offset));
-				}
-				forceMigration += 1;
-				if (forceMigration == 1000) {
-					forceMigration = 0;
-					System.err.println("OOOOOHHHH FOOOOK ME, WE'RE GONNA SLEEP!");
-					Thread.sleep(2 * MSock.TIMEOUT);
 				}
 			}
 		}
@@ -131,4 +125,15 @@ public class MigAudioServer {
 		}
 		System.out.println("server: shutdown");
     }
+
+	private void listenForBradburyForcedTimeout() {
+		Scanner s = new Scanner(System.in);
+		(new Thread(() -> {
+			while (true) {
+				s.nextLine();
+				System.err.println("WILL FORCE A TIMEOUT!");
+				client.forceWriteTimeout();
+			}
+		})).start();
+	}
 }

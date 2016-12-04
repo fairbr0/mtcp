@@ -157,6 +157,17 @@ public class MSock extends AbstractMSock {
 					Flag[] flags = {Flag.MESSAGE};
 					//log("soTimeOut outgoing listener: " + socket.getSoTimeout());
 					byte[] message = outByteMessages.take();
+					if (forcedWriteTimeout.get()) {
+						//MESSAGE, ADVISE_MIG
+
+						forcedWriteTimeout.set(false);
+						migrate();
+
+
+
+
+
+					}
 					oos.writeObject(new Packet(flags, message));
 					//log("Wrote Packet");
 				}
@@ -165,6 +176,10 @@ public class MSock extends AbstractMSock {
 			} catch (IOException e) {
 				e.printStackTrace();
 			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (MTCPMigrationException e) {
 				e.printStackTrace();
 			}
 		})).start();
@@ -176,69 +191,33 @@ public class MSock extends AbstractMSock {
 				//log("listening for packet");
 				try {
 					//log("soTimeOut incomingListener: " + socket.getSoTimeout());
-					Object o = null;
 					Packet p = null;
 					try {
-						o = ois.readObject();
+						if (forcedReadTimeout.get()) {
+							forcedReadTimeout.set(false);
+							throw new SocketTimeoutException();
+						}
+						p = (Packet)ois.readObject();
 					} catch (StreamCorruptedException e) {
 						e.printStackTrace();
-						System.err.println("-----");
-						if (o == null) {
-							System.err.println("o: null");
-						} else {
-							System.err.println("o: " + o.toString());
-						}
-						System.err.println("ois:" + ois.toString());
-						//System.exit(1);
 						throw new SocketTimeoutException();
 					} catch (ClassNotFoundException e) {
 						e.printStackTrace();
-						System.err.println("-----");
-						if (o == null) {
-							System.err.println("o: null");
-						} else {
-							System.err.println("o: " + o.toString());
-						}
-						System.err.println("-----");
 						throw new SocketTimeoutException();
 					} catch (ClassCastException e) {
 						e.printStackTrace();
-						System.err.println("-----");
-						if (o == null) {
-							System.err.println("o: null");
-						} else {
-							System.err.println("o: " + o.toString());
-						}
-						System.err.println("-----");
 						throw new SocketTimeoutException();
 					} catch (OptionalDataException e) {
 						e.printStackTrace();
-						System.err.println("-----");
-						if (o == null) {
-							System.err.println("o: null");
-						} else {
-							System.err.println("o: " + o.toString());
-						}
-						System.err.println("-----");
 						throw new SocketTimeoutException();
-					}
-					try {
-						p = (Packet)o;
-					} catch (Exception e) {
-						e.printStackTrace();
-						System.err.println("-----");
-						if (p == null) {
-							System.err.println("p: null");
-						} else {
-							System.err.println("p: " + p.toString());
-						}
-						System.err.println("-----");
-						System.exit(1);
 					}
 
 					Flag[] f = p.getFlags();
 					if (containsFlag(Flag.MESSAGE, f)) {
 						//log("Got MESSAGE packet");
+						if (containsFlag(Flag.ADVISE_MIG, f)) {
+							throw new SocketTimeoutException();
+						}
 						inByteMessages.put(p.getPayload());
 						//log("Wrote ACK");
 						Flag[] flags = {Flag.ACK};
@@ -246,8 +225,6 @@ public class MSock extends AbstractMSock {
 					} else if (containsFlag(Flag.ACK, f)) {
 						ackLock.set(false);
 						//log("ACK");
-
-
 					}
 				} catch (SocketTimeoutException e) {
 					//logError("======Client side timeout, now forcing migration=====");

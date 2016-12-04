@@ -20,8 +20,6 @@ public class MigAudioClient {
     private BlockingQueue<byte[]> byteBuffer;
 
     public static void main(String[] args) throws Exception {
-		keyLogger();
-		System.err.println("Logging...");
         MigAudioClient client = new MigAudioClient();
 		if (args.length != 1) {
             System.err.println("Error: Expected one argument");
@@ -35,7 +33,7 @@ public class MigAudioClient {
 
     public void run(String address, int port) throws Exception {
         System.out.println("Client: reading from 127.0.0.1:6666");
-        MSock socket = new MSock((new InetSocketAddress(address, port)).getAddress(), port);
+        this.socket = new MSock((new InetSocketAddress(address, port)).getAddress(), port);
         this.os = socket.getOutputStream();
         this.is = socket.getInputStream();
         this.oos = new MigratoryObjectOutputStream(this.os);
@@ -63,17 +61,17 @@ public class MigAudioClient {
         streamBytes();
 
         System.out.println("Waiting for buffer to fill");
-        while (this.byteBuffer.size() < 100) {
+        while (this.byteBuffer.size() < 177) {
 			Thread.sleep(0);
             //block
         }
         System.out.println("Beginning to play");
-
+		listenForBradburyForcedTimeout();
 		while (true) {
 			while (this.byteBuffer.size() > 0) {
             	line.write(this.byteBuffer.take(), 0, 1024);
         	}
-			while (this.byteBuffer.size() < 100) {
+			while (this.byteBuffer.size() < 177) {
 				Thread.sleep(0);
 	            //block
 	        }
@@ -88,23 +86,19 @@ public class MigAudioClient {
                     byte[] tempBuffer = is.readBytes();
                     this.byteBuffer.put(tempBuffer);
                 }
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
         })).start();
     }
 
-	private static void keyLogger() {
+	private void listenForBradburyForcedTimeout() {
 		Scanner s = new Scanner(System.in);
 		(new Thread(() -> {
 			while (true) {
-				int m = s.nextInt();
-				try {
-					Thread.sleep(2 * MSock.TIMEOUT);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+				s.nextLine();
+				System.err.println("WILL FORCE A TIMEOUT!");
+				socket.forceReadTimeout();
 			}
 		})).start();
 	}

@@ -18,6 +18,8 @@ public abstract class AbstractMSock {
 	protected ObjectInputStream ois;
 	protected AtomicBoolean ackLock = new AtomicBoolean(false);
 	protected AtomicBoolean migrated = new AtomicBoolean(false);
+	protected AtomicBoolean forcedReadTimeout = new AtomicBoolean(false);
+	protected AtomicBoolean forcedWriteTimeout = new AtomicBoolean(false);
 
 	public AbstractMSock() {
 		outByteMessages = new LinkedBlockingQueue<byte[]>();
@@ -27,6 +29,14 @@ public abstract class AbstractMSock {
 	public AbstractMSock(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		this();
 		acceptClient(s);
+	}
+
+	public void forceWriteTimeout() {
+		forcedWriteTimeout.set(true);
+	}
+
+	public void forceReadTimeout() {
+		forcedReadTimeout.set(true);
 	}
 
 	protected void acceptClient(Socket s) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
