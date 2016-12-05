@@ -62,27 +62,42 @@ public class MSock extends AbstractMSock {
 		//log("MIGRATION CALLED");
 		ackLock.set(true);
 		//Pick S2 from list in FIFO strategy
-		if (otherServers == null || otherServers.isEmpty() || otherServers.size() == 0) {
-			throw new MTCPMigrationException("No servers to migrate to");
-		}
-		//construct socket and streams to S2
+		Socket s2Socket;
 		AddressMapping s2Mapping = null;
-		boolean foundOtherServer = false;
-		while (!foundOtherServer) {
-			int random = new Random().nextInt(otherServers.size());
-			s2Mapping = otherServers.get(random);
-			if (s2Mapping.getPublicAddress().equals(socket.getInetAddress())) {
-				if (s2Mapping.getPublicPort() != socket.getPort()) {
-					foundOtherServer = true;
+		while (true) {
+			if (otherServers == null || otherServers.isEmpty() || otherServers.size() == 0) {
+				throw new MTCPMigrationException("No servers to migrate to");
+			}
+			if (otherServers.size() == 1) {
+				ackLock.set(false);
+				log("Cannot migrate, no other servers available");
+				return;
+			}
+			int random = 0;
+			try {
+				//construct socket and streams to S2
+				s2Mapping = null;
+				boolean foundOtherServer = false;
+				while (!foundOtherServer) {
+					random = new Random().nextInt(otherServers.size());
+					s2Mapping = otherServers.get(random);
+					if (s2Mapping.getPublicAddress().equals(socket.getInetAddress())) {
+						if (s2Mapping.getPublicPort() != socket.getPort()) {
+							foundOtherServer = true;
+						}
+					} else {
+						foundOtherServer = true;
+					}
 				}
-			} else {
-				foundOtherServer = true;
+
+				//log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2Mapping.toString());
+
+				s2Socket = new Socket(s2Mapping.getPublicAddress(), s2Mapping.getPublicPort());
+				break;
+			} catch (ConnectException e) {
+				otherServers.remove(random);
 			}
 		}
-
-		//log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%Found a server to migrate to: " + s2Mapping.toString());
-
-		Socket s2Socket = new Socket(s2Mapping.getPublicAddress(), s2Mapping.getPublicPort());
 		//log("Created s2Socket");
 		ObjectOutputStream s2oos = new ObjectOutputStream(s2Socket.getOutputStream());
 		ObjectInputStream s2ois = new ObjectInputStream(s2Socket.getInputStream());
@@ -216,10 +231,12 @@ public class MSock extends AbstractMSock {
 					if (containsFlag(Flag.MESSAGE, f)) {
 						//log("Got MESSAGE packet");
 						if (containsFlag(Flag.ADVISE_MIG, f)) {
+							inByteMessages.put(p.getPayload());
+							Flag[] flags = {Flag.ACK};
+							oos.writeObject(new Packet(flags, null));
 							throw new SocketTimeoutException();
 						}
 						inByteMessages.put(p.getPayload());
-						//log("Wrote ACK");
 						Flag[] flags = {Flag.ACK};
 						oos.writeObject(new Packet(flags, null));
 					} else if (containsFlag(Flag.ACK, f)) {

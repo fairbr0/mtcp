@@ -124,6 +124,7 @@ public class MigAudioServer {
 			//block
 		}
 		System.out.println("server: shutdown");
+		System.exit(0);
     }
 
 	private void listenForBradburyForcedTimeout() {
