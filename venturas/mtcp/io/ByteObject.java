@@ -4,6 +4,8 @@ import java.util.*;
 import java.net.*;
 import java.io.*;
 
+/* We use this to help represent a serialized object Also see our serialization utils */
+
 public class ByteObject {
 	int paddingSize;
 	private int length;

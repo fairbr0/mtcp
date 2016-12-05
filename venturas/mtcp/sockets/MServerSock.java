@@ -9,31 +9,31 @@ import venturas.mtcp.packets.*;
 import venturas.mtcp.io.*;
 
 public class MServerSock extends AbstractMSock {
-	private List<AddressMapping> serverList;
-    private State latestState;
-	private int publicPort;
-	private int privatePort;
-	private Socket otherServer;
-	private boolean hasClient;
-	private ServerSocket ssServer;
-	private ServerSocket ssClient;
+	private List<AddressMapping> serverList; //pool
+    private State latestState; //latest snapshot
+	private int publicPort; // port for client
+	private int privatePort; //port for private network between servers
+	private Socket otherServer; // talk to other server to do a migration
+	private boolean hasClient; //do I have a client on me already?
+	private ServerSocket ssServer; //accept incoming server connection
+	private ServerSocket ssClient; //accept incoming client connection
 
   	public MServerSock(int publicPort, int privatePort, List<AddressMapping> serverList) throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
-		//TODO setup list of servers
 		super();
 		init(publicPort, privatePort, serverList);
 		this.ssServer = new ServerSocket(privatePort);
 		this.ssClient = new ServerSocket(publicPort);
   	}
 
+	// Reinitialise the object after migration away from it
 	private void reinit() throws IOException {
 		init(this.publicPort, this.privatePort, this.serverList);
 		try {
-			ois.close(); //#thisisnew
-			oos.close(); //#thisisnew
+			ois.close();
+			oos.close();
 			socket.close();
 		} catch (EOFException e) {
-   			//logError("CAUGHT AN EOFException on socket close");
+			// this is okay :)
    		}
 		accept();
 		migrated.set(false);
@@ -47,17 +47,19 @@ public class MServerSock extends AbstractMSock {
 		this.hasClient = false;
 		this.latestState = new State(null);
 	}
-	/** This is NOT blocking **/
+
+	/** This is NOT blocking. Apps have to loop on hasClient() method instead **/
 	public void accept() {
 		this.acceptServer();
 		this.acceptClient();
 	}
 
-	//TODO implement me
+	// Wait for another server to come in
 	private void acceptServer() {
 		(new Thread(() -> {
 			try {
 				otherServer = ssServer.accept();
+				log("Server connected in");
 				serverToServerHandshake();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -69,12 +71,12 @@ public class MServerSock extends AbstractMSock {
 		})).start();
 	}
 
+	// Wait for a client to come in!
 	private void acceptClient() {
 		(new Thread(() -> {
 			try {
-				System.err.println("made ss, now to super.acceptClient!");
 				super.acceptClient(ssClient.accept());
-				System.err.println("super.acceptClient did its work");
+				log("Client connected in");
 				hasClient = true;
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -88,10 +90,13 @@ public class MServerSock extends AbstractMSock {
 		})).start();
 	}
 
+	/* API endpoint exposed to app. App on the SERVER SIDE should periodically export their computation state */
 	public void exportState(State state) {
         this.latestState = state;
     }
 
+	/* API endpoint exposed to app. If we just did a migration, import the state
+	 * to reconstruct which point in the computation we were at so computation can be continued */
     public State importState() throws MTCPStateException {
         if (this.latestState == null) {
             throw new MTCPStateException("Latest state snapshot is null");
@@ -99,11 +104,14 @@ public class MServerSock extends AbstractMSock {
         return this.latestState;
     }
 
+
+	/* Deal with one side of the migration handshake! */
 	private void serverToServerHandshake() throws IOException, ClassNotFoundException, MTCPMigrationException, MTCPHandshakeException {
-		//log("serverToServerHandshake initiated");
+		log("serverToServerHandshake initiated");
 		ObjectOutputStream soos = new ObjectOutputStream(otherServer.getOutputStream());
         ObjectInputStream sois = new ObjectInputStream(otherServer.getInputStream());
-		//log("created streams, will now try to read a packet. Will hope it is req state");
+
+		//Read REQ_STATE packet
 		Flag[] reqState = ((InternalPacket)sois.readObject()).getFlags();
 		//log("read a packet, hoping it is REQ_STATE, let's check bro");
 		if (reqState.length != 1) {
@@ -112,41 +120,50 @@ public class MServerSock extends AbstractMSock {
 		if (!containsFlag(Flag.REQ_STATE, reqState)) {
 			throw new MTCPMigrationException("Did not get REQ_STATE");
 		}
-		//log("YAYAYAYAYAY it was a REQ_STATE");
+
+		log("Read REQ_STATE");
+
+		//Write RSP_STATE packet with response with STATE
 		Flag[] rspState = {Flag.RSP_STATE};
 		InternalPacket<State> state = new InternalPacket<State>(rspState, latestState);
 		soos.writeObject(state);
-		//log("Wrote an RSP_STATE, let's look at another packet which i hope is an ACK");
+		log("Wrote an RSP_STATE");
 
+		//Read ACK
 		Flag[] ack = ((InternalPacket)sois.readObject()).getFlags();
-		//log("just read something, gonna check if it is an ACK yo");
 		if (ack.length != 1) {
 			throw new MTCPMigrationException("Did not get length 1 flags when expecting ACK");
 		}
 		if (!containsFlag(Flag.ACK, ack)) {
 			throw new MTCPMigrationException("Did not get ACK");
 		}
+		log("Read ACK");
+
+		//Everything worked, close stuff off! We have just handed over to another server
 		try {
-			sois.close(); //#thisisnew
-			soos.close(); //#thisisnew
+			sois.close();
+			soos.close();
 			this.otherServer.close();
-			// this.acceptServer();
-			// this.handleIncomingPacket();
 		} catch (EOFException e) {
 			e.printStackTrace();
 		}
 
 		super.migrated.set(true);
+
+		//Reinit for a later mig
 		reinit();
-		//close shit off properly!!!!
 	}
 
+	/* Client is requesting to migrate to us! */
 	private void clientMigrationRequest(InetAddress address, int port) throws IOException, ClassNotFoundException, MTCPHandshakeException {
-        //get actual address from mapping
 
+		log("Facilitating mig request");
+		//Write ACK, MIG
 		Flag[] ackMig = {Flag.ACK, Flag.MIG};
 		oos.writeObject(new InternalPacket(ackMig, null));
+		log("Wrote ACK, MIG");
 
+		//Set up a socket on the address and port of the server to migrate AWAY from
         Socket s = getSocketFromMapping(address, port);
         ObjectOutputStream soos = new ObjectOutputStream(s.getOutputStream());
         ObjectInputStream sois = new ObjectInputStream(s.getInputStream());
@@ -154,39 +171,38 @@ public class MServerSock extends AbstractMSock {
         Flag[] flags = {Flag.REQ_STATE};
         InternalPacket p = new InternalPacket(flags);
         soos.writeObject(p);
-		//log("Sent REQ_STATE packet");
+		log("Wrote REQ_STATE");
 
         InternalPacket<State> response = (InternalPacket<State>) sois.readObject();
-		//log("Got response");
         if (!containsFlag(Flag.RSP_STATE, response.getFlags())) {
 			System.out.println(java.util.Arrays.toString(flags));
 			throw new MTCPHandshakeException("Not got RSP_STATE flag");
 		}
-		//log("Got RSP_STATE");
-        //got the state back.
+		log("Read RSP_STATE, and got application state from other server");
         this.latestState = (State) response.getPayload();
         Flag[] serverResponseFlags = {Flag.ACK};
         soos.writeObject(new InternalPacket(serverResponseFlags));
-		//log("Sent ACK response");
+		log("Wrote ACK");
         try {
-			//log("Closed connection to other server");
+			//close stuff off
 			soos.close();
 			sois.close();
             s.close();
         } catch (Exception e) {
-            // catch the errors thrown by streams;
+            // catch the errors thrown by streams;. THESE ARE OKAY :)
 			e.printStackTrace();
         }
 
         //tell the client that the migration was a success
-		//log("Sending ACK, MIG_READY to client");
+		log("Wrote ACK, MIG_READY");
         Flag[] clientResponseFlags = {Flag.ACK, Flag.MIG_READY};
         this.oos.writeObject(new InternalPacket(clientResponseFlags));
 		ackLock.set(true);
-		//log("Handshake complete");
-
+		log("Wrote ACK, MIG_READY");
+		log("Mig completed");
     }
 
+	// Take a public address and return the socket over the corresponding private address
     public Socket getSocketFromMapping(InetAddress address, int port) throws IOException {
         int mappedPort = 0;
         InetAddress mappedAddress = null;
@@ -208,11 +224,11 @@ public class MServerSock extends AbstractMSock {
         return server;
     }
 
+	/* Perform the initial handshake! */
   	protected void initialHandshake() throws IOException, ClassNotFoundException, MTCPHandshakeException, MTCPMigrationException {
 		ackLock.set(true);
-		//log("Beginning Handshake");
+		log("Beginning Handshake");
 		InternalPacket p = (InternalPacket)ois.readObject();
-		//log("Got Packet");
 		if (p.getFlags().length > 2) {
 			throw new MTCPHandshakeException("got wrong no. of flags on expected SYN");
 		}
@@ -220,19 +236,19 @@ public class MServerSock extends AbstractMSock {
 			throw new MTCPHandshakeException("did not get SYN, instead got:" + Arrays.toString(p.getFlags()));
 		}
 		if (containsFlag(Flag.MIG, p.getFlags())) {
-			//log("Got SYN, MIG. Beginning server migration.");
+			log("Got SYN, MIG. Beginning server migration.");
 			AddressMapping s1 = (AddressMapping)p.getPayload();
 			clientMigrationRequest(s1.getPublicAddress(), s1.getPublicPort());
-			//log("Server ready");
 			ackLock.set(false);
 			return;
 		}
-		//log("Got SYN flag");
+		log("Got SYN flag, without MIG, will just do a normal handshake");
 		Flag[] synAck = {Flag.SYN, Flag.ACK};
 		oos.writeObject(new InternalPacket(synAck, getClientMapping()));
 		oos.flush();
-		//log("Send SYN, ACK to client");
-		//log("Waiting for ACK");
+		log("Wrote SYN, ACK to client");
+
+
 		Flag[] ackResponse = ((InternalPacket)ois.readObject()).getFlags();
 		if (ackResponse.length != 1) {
 			throw new MTCPHandshakeException("got wrong no. of flags on expected ACK");
@@ -240,12 +256,11 @@ public class MServerSock extends AbstractMSock {
 		if (!containsFlag(Flag.ACK, ackResponse)) {
 			throw new MTCPHandshakeException("did not get ACK");
 		}
-		//got ack, yay!
-		//log("Got ACK");
-		//log("Handshake complete");
+		log("Read ACK");
 		ackLock.set(false);
-		//log("Socket Ready");
+		//socket is ready
   	}
+
 
 	private List<AddressMapping> getClientMapping() {
 		if (this.serverList == null ) {
@@ -274,30 +289,30 @@ public class MServerSock extends AbstractMSock {
 						}
 						p = (Packet)ois.readObject();
 					} catch (EOFException e) {
-						//logError("KILLLING MYSELF for reincarnation");
+						//All okay :) We've been migrated away from
 						logError("EOFException, migration??????????");
 						break;
 					} catch (SocketException e) {
-						logError("SocketException, migration???????");
+						//All okay :) We've been migrated away from
 						break;
 					}
-					// System.err.println("&&&&&&&&&&&&&&&& did that read!");
+
+					// Check if we got a MESSAGE or an ACK
 					Flag[] f = p.getFlags();
 					if (containsFlag(Flag.MESSAGE, f)) {
 						inByteMessages.put(p.getPayload());
 						this.latestState.addToBufferIn(p.getPayload());
 						Flag[] flags = {Flag.ACK};
-
 						oos.writeObject(new Packet(flags, null));
-						//log("wrote ACK, btw timeout is " + socket.getSoTimeout());
+						//wrote ACK
 					} else if (containsFlag(Flag.ACK, f)) {
-						//log("got ACK packet");
+						//Read ACK
 						ackLock.set(false);
 
 					}
 				}
-				System.err.println("DEEEEEADDD");
 
+			// Stack traces are all okay :)
 			} catch (SocketTimeoutException e) {
 				//logError("Socket timed out, but that's probably okay");
 				e.printStackTrace();
@@ -308,10 +323,6 @@ public class MServerSock extends AbstractMSock {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			// catch (Exception e) {
-			// 	// e.printStackTrace();
-			// 	System.err.println(":(");
-			// }
 		});
 		t.start();
 	}
@@ -328,16 +339,19 @@ public class MServerSock extends AbstractMSock {
             ackLock.set(true);
             byte[] outgoingBytes = outByteMessages.take();
 			if (forcedWriteTimeout.get()) {
+				// Tell the client he should migrate away from me because I have heavy load or something
 				forcedWriteTimeout.set(false);
 				System.err.println("ADVISE_MIG");
 				Flag[] flags = {Flag.MESSAGE, Flag.ADVISE_MIG};
             	oos.writeObject(new Packet(flags, outgoingBytes));
 			} else {
+				// Just send a message over as normal
 				Flag[] flags = {Flag.MESSAGE};
 				oos.writeObject(new Packet(flags, outgoingBytes));
 			}
 			oos.flush();
 
+			// Add to buffers
 			this.latestState.addToBufferOut(outgoingBytes);
           }
         } catch (Exception e) {
@@ -350,6 +364,7 @@ public class MServerSock extends AbstractMSock {
 		return "<MServerSock>";
 	}
 
+	// Application uses this to check if it can use this MSS yet
 	public boolean hasClient() {
 		return hasClient;
 	}

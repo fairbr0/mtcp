@@ -62,7 +62,6 @@ public class MigAudioServer {
 
 		int count = 0;
 		while (count != - 1) {
-			System.err.println("ITERATION");
 			while (!client.hasClient()) {
 				//block
 				Thread.sleep(500);
@@ -73,7 +72,6 @@ public class MigAudioServer {
 			State<Long> state = client.importState();
 			long offset = 0;
 			if (state.getSnapshot() == null) {
-				System.err.println("Null snapshot, that suggests this is the start of stream!");
 				// This is the first server to have ever been run, we are NOT picking up from a migration
 				offset = 0;
 				// (i) Check the client requested a Start
@@ -85,7 +83,6 @@ public class MigAudioServer {
 	            oos.writeObject(format.toString());
 			} else {
 				// The client has migrated to us, use state snapshot plus buffers to gracefully pick up the service
-				System.err.println("Fuck lads, it ain't empty. Set the offset then you cunt");
 				System.err.println(state.toString());
 				offset = state.getSnapshot() + SerializationUtils.arrayLength * state.getBufferOut().size();
 			}
@@ -134,6 +131,12 @@ public class MigAudioServer {
 				s.nextLine();
 				System.err.println("WILL FORCE A TIMEOUT!");
 				client.forceWriteTimeout();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("ENTER thread open again");
 			}
 		})).start();
 	}

@@ -2,6 +2,9 @@ package venturas.mtcp.io;
 
 import venturas.mtcp.sockets.*;
 
+//Advise you to see non-object variant. We just serialize stuff and send it over the byte streams we made
+
+
 public class MigratoryObjectOutputStream {
 
 	MigratoryOutputStream os;

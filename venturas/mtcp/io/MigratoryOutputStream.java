@@ -5,10 +5,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import venturas.mtcp.sockets.MTCPStreamMigratedException;
 
-/* why not make this class generic rather than having to use
- * BlockingQueue<Object>? Because this way it will conform to the same interface
- * as Java's streams
- */
+/* Conforms to roughly the same interface as Java stream but is basically just a queue!
+ * Why? Because the sockets can continue to write to the stream by just appending onto the queue,
+ * as objects are passed by reference. But application can only write onto it and not read */
 
 public class MigratoryOutputStream {
 	private BlockingQueue<byte[]> messageQueue;

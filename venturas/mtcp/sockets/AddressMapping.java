@@ -2,6 +2,7 @@ package venturas.mtcp.sockets;
 import java.net.*;
 import java.io.*;
 
+/* Models public AND private network gracefully, see our paper */
 public class AddressMapping implements Serializable {
 	private final InetAddress publicAddress;
 	private final InetAddress privateAddress;

@@ -32,7 +32,6 @@ public class MigAudioClient {
     }
 
     public void run(String address, int port) throws Exception {
-        System.out.println("Client: reading from 127.0.0.1:6666");
         this.socket = new MSock((new InetSocketAddress(address, port)).getAddress(), port);
         this.os = socket.getOutputStream();
         this.is = socket.getInputStream();
@@ -96,9 +95,18 @@ public class MigAudioClient {
 		Scanner s = new Scanner(System.in);
 		(new Thread(() -> {
 			while (true) {
-				s.nextLine();
+				String m = s.nextLine();
+                if (!m.equals("M")) {
+                    continue;
+                }
 				System.err.println("WILL FORCE A TIMEOUT!");
 				socket.forceReadTimeout();
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("ENTER thread open again");
 			}
 		})).start();
 	}

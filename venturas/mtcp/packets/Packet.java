@@ -3,6 +3,7 @@ package venturas.mtcp.packets;
 import java.io.Serializable;
 import java.util.Arrays;
 
+//A packet is a pair of flags and bytes :)
 public class Packet implements Serializable {
 
 	private Flag[] flags;

@@ -2,6 +2,10 @@ package venturas.mtcp.packets;
 
 import java.io.Serializable;
 
+// Used over the private network to send objects
+//I.e. it is not worth serializing EVERYTHING, only the parts of TCP we actually wanna simulate
+// SO this is used very rarely to send server pool list for instance. Again, only used internally.
+// All client-to-server data is sent over as a PACKET instead
 public class InternalPacket<T> implements Serializable {
 
 	private Flag[] flags;

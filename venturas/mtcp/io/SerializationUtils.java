@@ -4,7 +4,11 @@ import java.util.*;
 import java.net.*;
 import java.io.*;
 
+// REFERENCE: Code was inspired by the following forum page:
 //http://stackoverflow.com/questions/2836646/java-serializable-object-to-byte-array
+
+//This class is used to serialize and deserialize objects so that objects can be sent as arrays of bytes
+// ie. more suitable for audio
 
 public class SerializationUtils {
 
@@ -25,8 +29,7 @@ public class SerializationUtils {
             try {
                 bos.close();
             } catch (IOException e) {
-                System.err.println("SERIALIZER IOEXCEPTION, StackOverflow says ignore it");
-                e.printStackTrace();
+                // System.err.println("SERIALIZER IOEXCEPTION, StackOverflow says ignore it");
             }
         }
         return null;
@@ -48,8 +51,7 @@ public class SerializationUtils {
                     in.close();
                 }
             } catch (IOException e) {
-                System.err.println("SERIALIZER IOEXCEPTION, StackOverflow says ignore it");
-                e.printStackTrace();
+                // System.err.println("SERIALIZER IOEXCEPTION, StackOverflow says ignore it");
             }
         }
         return null;
