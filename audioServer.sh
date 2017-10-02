@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ $# -ne 3 ]]; then
-	echo "Usage: ./servers.sh k n"
+	echo "Usage: ./audioServer.sh k n songpath"
 	echo "k : [1,...,n]. This server runs on ports 9030+k, 10030+k"
 	echo "n : The number of servers"
 	echo "songpath : File path to some delictably guilty pop music"

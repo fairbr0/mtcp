@@ -72,6 +72,7 @@ public class ServerCounter {
 					} else {
 						log("FALSE; " + b[0]);
 					}
+					log("Sum " + sum);
 					if (b[0] % 3 == 0) {
 						serverSocket.exportState(new State<Integer>(sum));
 					}

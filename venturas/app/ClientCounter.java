@@ -26,7 +26,7 @@ public class ClientCounter {
 				qos.writeBytes(b);
 				i += 1;
 				if (i % 10 == 0) {
-					Thread.sleep(MSock.TIMEOUT * 2);
+					Thread.sleep(MSock.TIMEOUT * 10);
 				}
 			} catch (MTCPStreamMigratedException e) {
 				e.printStackTrace();
